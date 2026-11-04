@@ -1,0 +1,21 @@
+{
+  "name": "loja-construcao",
+  "version": "1.14.0",
+  "description": "Sistema de controle de vendas e emissao de cupom para loja de material de construcao",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "fast-xml-parser": "^5.10.1",
+    "node-forge": "^1.4.0",
+    "qrcode": "^1.5.4",
+    "sql.js": "^1.10.3",
+    "xlsx": "^0.18.5",
+    "xml-crypto": "^6.1.2"
+  }
+}

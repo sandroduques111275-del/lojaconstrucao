@@ -1,0 +1,159 @@
+=====================================================================
+   COMO COLOCAR O SISTEMA NA INTERNET (RAILWAY) - PASSO A PASSO
+   RVL Material de Construcao
+=====================================================================
+
+PARA QUE SERVE
+  Hoje o sistema roda em cada computador da loja, cada um com o seu banco.
+  Na internet ele fica num endereco so (ex.: https://loja-rvl.up.railway.app)
+  e TODOS os computadores usam o MESMO sistema e o MESMO banco. Some a
+  diferenca entre as maquinas: uma venda feita num aparece na hora no outro.
+
+  A impressao do cupom continua no navegador do computador da loja, como e
+  hoje (o atalho-pdv.bat tambem funciona apontando para o endereco novo).
+
+O QUE VOCE VAI PRECISAR
+  - Uma conta no GitHub (github.com) — de graca.
+  - Uma conta no Railway (railway.com) — voce ja usa na Massatop e na clinica.
+  - O arquivo loja.db ATUAL da loja (o banco com as vendas de verdade).
+
+IMPORTANTE ANTES DE COMECAR
+  - NAO suba o arquivo loja.db para o GitHub. Ele tem o certificado digital
+    e o CSC. O .gitignore do sistema ja impede isso. O banco entra depois,
+    por dentro do sistema (passo 7), com seguranca.
+  - Faca agora um backup do loja.db da loja (copie para um pen drive).
+
+---------------------------------------------------------------------
+PARTE 1 - POR O CODIGO NO GITHUB (pelo site, sem programa nenhum)
+---------------------------------------------------------------------
+
+  1. Entre em github.com e faca login.
+
+  2. Canto superior direito -> New repository (novo repositorio).
+       - Nome: loja-rvl   (ou o que quiser)
+       - Marque "Private" (particular) para so voce ver.
+       - NAO marque "Add README".
+       - Create repository.
+
+  3. Na pagina que abrir, clique em:
+       "uploading an existing file"  (enviar um arquivo existente)
+
+  4. Abra a pasta do sistema no computador. Selecione TUDO, MENOS:
+       - a pasta  node_modules   (nao suba, e enorme e o Railway recria)
+       - o arquivo  loja.db       (nao suba, tem o certificado)
+       - a pasta  backups         (se existir)
+     Arraste o resto para a janela do GitHub:
+       server.js, fiscal.js, pacote.js, ncm.js,
+       package.json, package-lock.json, railway.json, Procfile, .nvmrc,
+       a pasta  public  inteira  e  a pasta  dados  (com o ncm.json),
+       os .txt e o README.
+       (Se o GitHub reclamar de algum arquivo grande, o unico que importa
+        de verdade e o dados/ncm.json, com 1,3 MB — esse PODE subir.)
+
+  5. Embaixo, em "Commit changes", clique no botao verde Commit changes.
+     Pronto: o codigo esta no GitHub.
+
+---------------------------------------------------------------------
+PARTE 2 - CRIAR O PROJETO NO RAILWAY
+---------------------------------------------------------------------
+
+  6. Entre em railway.com -> New Project -> Deploy from GitHub repo.
+       - Autorize o Railway a ver seus repositorios (se pedir).
+       - Escolha o repositorio  loja-rvl.
+     O Railway comeca a montar sozinho. Espere terminar (fica verde).
+
+---------------------------------------------------------------------
+PARTE 3 - O VOLUME (a pasta que NAO some a cada atualizacao)
+---------------------------------------------------------------------
+
+  !!! ESTE PASSO E O MAIS IMPORTANTE. SEM ELE, O BANCO SOME. !!!
+
+  7. No Railway, clique no servico (o quadradinho do seu sistema).
+       - Botao direito na area do projeto -> Add Volume  (ou aba Volumes).
+       - Mount path (ponto de montagem), digite exatamente:   /data
+       - Salve.
+     O Railway vai reiniciar o servico com o volume montado.
+     O sistema acha o /data sozinho — nao precisa de mais nada.
+
+     (Se preferir, da no mesmo criar a variavel DATA_DIR=/data na aba
+      Variables. Mas so o volume em /data ja basta.)
+
+---------------------------------------------------------------------
+PARTE 4 - ABRIR O SISTEMA E ENTRAR
+---------------------------------------------------------------------
+
+  8. No Railway, aba Settings -> Networking -> Generate Domain.
+     Vai aparecer um endereco tipo  loja-rvl.up.railway.app.
+     Esse e o endereco do sistema na internet. Abra no navegador.
+
+  9. Entre com  admin / admin.
+     Como esta na internet, o sistema vai EXIGIR trocar a senha na hora.
+     Escolha uma senha sua (6+ caracteres). Guarde bem.
+     (Os outros usuarios - lina, line, mar... - continuam existindo, com
+      as senhas que ja tem. Na primeira vez cada um troca a sua.)
+
+---------------------------------------------------------------------
+PARTE 5 - LEVAR O BANCO DA LOJA PARA A INTERNET
+---------------------------------------------------------------------
+
+ 10. Ainda com o sistema aberto na internet, va em:
+       Configuracoes -> Backup -> Restaurar um backup.
+     - Clique em "Conferir arquivo" e escolha o  loja.db  da loja
+       (ou um backup-loja-....db recente).
+     - O sistema MOSTRA o que tem no arquivo (quantas vendas, produtos,
+       a ultima NFC-e, se tem certificado e CSC). Confira se os numeros
+       sao os da sua loja.
+     - Clique em "Restaurar agora" e confirme digitando RESTAURAR.
+     Pronto: o sistema na internet agora tem os produtos, clientes, vendas,
+     o certificado, o CSC e a numeracao da NFC-e da loja.
+     (Depois de restaurar, os usuarios e senhas passam a ser os do arquivo.
+      Entre de novo com o usuario da loja; troque a senha de fabrica.)
+
+ 11. Confira em Sistema -> NFC-e se o CSC de producao esta la ("36
+     caracteres, com hifens") e emita uma venda de teste pequena para ver
+     a nota sair autorizada.
+
+---------------------------------------------------------------------
+PARTE 6 - APONTAR OS COMPUTADORES DA LOJA PARA A INTERNET
+---------------------------------------------------------------------
+
+ 12. Em cada computador, em vez de abrir pelo iniciar.bat, abra o navegador
+     no endereco do Railway (o do passo 8). Salve nos favoritos.
+     - A partir daqui, NAO precisa mais do iniciar.bat nesses computadores
+       para o dia a dia (o servidor agora e o da internet).
+     - Para o cupom sair direto na impressora: no atalho-pdv.bat, crie ao
+       lado dele um arquivo  endereco.txt  com o endereco do Railway dentro
+       (so o endereco, numa linha). O atalho passa a abrir a internet com
+       impressao direta.
+     - A impressora continua instalada e configurada em cada computador,
+       como hoje.
+
+---------------------------------------------------------------------
+ATUALIZAR O SISTEMA DEPOIS (quando houver versao nova)
+---------------------------------------------------------------------
+  - Repita o PARTE 1 passo 3-5 (Add file -> Upload files) com os arquivos
+    novos, por cima dos antigos, e Commit. O Railway reconstroi sozinho.
+  - Os dados NAO se perdem: eles ficam no volume /data, nao no codigo.
+  - Da tambem para usar o deploy.bat (git push), mas o envio pelo site do
+    GitHub e mais simples e nao depende de configurar o git.
+
+---------------------------------------------------------------------
+SE ALGUMA COISA DER ERRADO
+---------------------------------------------------------------------
+  - "Esqueci / perdi a senha do admin e ninguem entra":
+      No Railway -> aba Variables -> New Variable:  RESETAR_ADMIN = 1
+      -> o servico reinicia e o admin volta para admin/admin.
+      Entre, troque a senha, e DEPOIS APAGUE essa variavel (senao a senha
+      volta a cada reinicio).
+  - "Aparece aviso de volume / banco vazio nos logs (Deployments -> View logs)":
+      Confira a PARTE 3 (o volume em /data ligado a ESTE servico). O sistema
+      se protege e nao sobe sem os dados; corrigido o volume, ele volta.
+  - Backup: mesmo na internet, baixe o backup de vez em quando
+    (Configuracoes -> Backup -> Baixar backup agora) e guarde fora do
+    Railway. E a sua copia de seguranca.
+  - Para conferir se o sistema esta de pe sem entrar:
+      abra  SEU-ENDERECO/saude  no navegador (tem que dizer "ok").
+
+=====================================================================
+  Qualquer passo que travar, tire um print da tela do Railway e mande.
+=====================================================================

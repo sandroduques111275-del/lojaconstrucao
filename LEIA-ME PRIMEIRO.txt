@@ -1,0 +1,83 @@
+========================================================
+  RVL MATERIAL DE CONSTRUCAO - SISTEMA DE VENDAS
+  COMO ABRIR
+========================================================
+
+NAO abra o arquivo index.html direto. Nao funciona.
+Este sistema tem servidor: os dados ficam num banco que
+roda no Node.js, nao dentro do navegador.
+
+
+PARA ABRIR:
+
+  1. De dois cliques em  iniciar.bat  (esta nesta mesma pasta)
+
+  2. Vai abrir uma janela preta. DEIXE ELA ABERTA.
+     Ela e o servidor. Se fechar, o sistema para.
+
+  3. O navegador abre sozinho em  http://localhost:3000
+
+  4. Usuario: admin      Senha: admin
+     Troque a senha em Configuracoes.
+
+
+AO ATUALIZAR O SISTEMA (versao nova por cima da antiga):
+
+  1. Feche a janela preta do servidor
+  2. Extraia a versao nova por cima da pasta
+  3. Rode o iniciar.bat - ele reinstala sozinho o que
+     for novo e sobe o sistema
+
+  Seus dados ficam no arquivo loja.db. NUNCA apague ele.
+  Se algo der errado, apague so a pasta node_modules e
+  rode o iniciar.bat de novo.
+
+
+SE O iniciar.bat ABRIR E FECHAR NA HORA:
+
+  Falta instalar o Node.js.
+  Baixe a versao LTS em  https://nodejs.org
+  Instale clicando em Avancar ate o fim e rode o
+  iniciar.bat de novo.
+
+
+IMPRESSORA (Epson TM-T20):
+
+  Com o sistema aberto, va em Configuracoes > Impressora e cupom.
+  Ja vem configurado para a TM-T20 em bobina de 80mm.
+
+  Clique em "Imprimir teste" e confira se a regua cabe numa
+  linha so. Nessa mesma tela tem o passo a passo do driver
+  (papel 80mm, corte automatico do papel e gaveta de dinheiro).
+
+  Para o cupom sair direto, sem o Windows perguntar nada:
+  deixe a TM-T20 como impressora PADRAO e use o atalho
+  atalho-pdv.bat no lugar de abrir o navegador na mao.
+
+
+PARA USAR EM OUTRO COMPUTADOR DA LOJA (mesma rede):
+
+  Com o servidor rodando, descubra o IP deste computador
+  (abra o Prompt de Comando e digite  ipconfig ).
+  Nos outros computadores, acesse no navegador:
+
+      http://IP_DESTE_COMPUTADOR:3000
+
+  Exemplo:  http://192.168.0.15:3000
+
+
+BACKUP:
+
+  Entre no sistema, va em Configuracoes > Backup e clique
+  em "Baixar backup agora". Faca isso uma vez por semana e
+  guarde o arquivo fora deste computador (pen drive, nuvem).
+
+
+IMPORTANTE SOBRE O CUPOM:
+
+  O cupom deste sistema e um COMPROVANTE INTERNO, SEM VALOR
+  FISCAL. Ele nao substitui a nota fiscal.
+
+========================================================
+Detalhes completos estao no arquivo README.md
+========================================================

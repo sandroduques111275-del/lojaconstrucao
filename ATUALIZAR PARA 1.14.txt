@@ -1,0 +1,91 @@
+=====================================================================
+  ATUALIZACAO 1.13 -> 1.14  (o sistema pode ir para a internet)
+=====================================================================
+
+O QUE MUDA
+
+  - PIX VOLTOU A EMITIR NOTA (correcao da rejeicao 391). A SEFAZ passou a
+    exigir, tambem no PIX, o mesmo bloco de pagamento que ja ia no cartao
+    (o grupo "card" com tpIntegra). Sem ele vinha "391 - Nao informados os
+    dados do cartao de credito/debito nas Formas de Pagamento". Desde
+    outubro TODA NFC-e paga no PIX estava sendo recusada por isso. Agora o
+    PIX (dinamico e estatico) sai com esse bloco e e autorizado.
+    >>> Reenvie as notas de PIX que ficaram rejeitadas: Sistema -> NFC-e ->
+        Notas emitidas -> botao Reenviar em cada uma. Cartao e dinheiro
+        nunca foram afetados.
+
+  - O SISTEMA PODE RODAR NA INTERNET (Railway). Ate agora ele so rodava no
+    computador da loja (http://localhost:3000). Nesta versao ele tambem
+    sobe para um endereco na internet, para os dois computadores usarem o
+    MESMO sistema e o MESMO banco — acaba a diferenca entre as maquinas.
+    Como subir: no arquivo  SUBIR PARA O RAILWAY.txt  (passo a passo).
+
+  - BOTAO "RESTAURAR UM BACKUP" (Configuracoes -> Backup). Troca todos os
+    dados do sistema pelos de um arquivo (loja.db ou um backup-loja-....db).
+    E por aqui que o banco da loja vai para a internet no primeiro dia.
+    Antes de trocar, o sistema confere o arquivo e MOSTRA o que tem dentro
+    (quantas vendas, produtos, a ultima NFC-e, certificado, CSC) e guarda
+    uma copia do banco atual. So o Administrador faz isso.
+
+  - TROCAR A SENHA DE FABRICA. Na internet, quem entrar com a senha de
+    fabrica (admin/admin, caixa/caixa) e OBRIGADO a trocar antes de usar o
+    sistema — senao qualquer um que descubra o endereco entraria. No
+    computador da loja isso continua sendo so um lembrete. A senha nova
+    precisa de 6 caracteres e nao pode ser obvia.
+
+  - PROTECAO CONTRA TENTATIVA DE SENHA. Muitos erros de senha seguidos
+    (do mesmo computador ou no mesmo usuario) travam o login por alguns
+    minutos. Vale so para quem erra; quem acerta entra normal.
+
+  - COPIA DIARIA AUTOMATICA. Uma vez por dia o sistema guarda uma copia do
+    banco numa pasta  backups  (ao lado do loja.db), e mantem as 7 ultimas.
+    Nao substitui o "Baixar backup" (que leva o arquivo para fora) — e uma
+    rede de seguranca a mais. A tela de Backup mostra onde os dados estao,
+    o tamanho e as ultimas copias.
+
+  - BANCO MAIS SEGURO. O loja.db agora e gravado "de uma vez" (grava num
+    arquivo ao lado e so entao troca): se a luz cair no meio, o banco de
+    antes continua inteiro. E o sistema NUNCA cria um banco vazio por cima
+    de um loja.db danificado ou vazio — ele avisa e para, para ninguem
+    vender em cima de um banco que vai sumir. Na internet, se o volume
+    (a pasta que guarda os dados) nao estiver montado, o sistema tambem
+    espera em vez de subir sem os dados.
+
+  - ATUALIZAR SEM CTRL+SHIFT+R. Depois de uma atualizacao, o navegador
+    pega as telas novas sozinho — nao precisa mais limpar o cache na mao.
+
+  - RECUPERAR O ACESSO NA INTERNET. Se ninguem conseguir entrar, da para
+    devolver admin/admin pelo Railway (variavel RESETAR_ADMIN=1). No
+    computador da loja continua o recuperar-acesso.bat de sempre.
+
+ATENCAO - JANEIRO DE 2027
+  A reforma tributaria (IBS/CBS) passa a ser exigida na NFC-e do Simples
+  Nacional em 04/01/2027. O sistema vai precisar de atualizacao antes
+  disso. Em 2026 a nota sai certa sem esses campos.
+
+-------------------------------------------------------------------------
+COMO ATUALIZAR O COMPUTADOR DA LOJA (continua igual)
+-------------------------------------------------------------------------
+  1. Feche o sistema (a janela preta do iniciar.bat).
+  2. Backup: copie o loja.db para um pen drive ou outra pasta.
+     (Ele NAO esta neste zip, de proposito.)
+  3. Copie TODOS os arquivos deste zip por cima da pasta do sistema,
+     substituindo os que ja existem.
+     NAO apague a pasta node_modules e NAO apague o loja.db.
+  4. Abra pelo iniciar.bat. Na janela preta tem que aparecer:
+        VERSAO 1.14 - Na internet (Railway): volume, senha e restauracao
+        Tabela NCM carregada: 10440 codigos.
+  5. Entre no sistema e, em Sistema -> NFC-e -> Notas emitidas, clique
+     REENVIAR nas notas de PIX que estavam rejeitadas (erro 391).
+     Elas agora sao autorizadas.
+  6. (Opcional) Em Configuracoes -> Backup, confira o quadro novo: onde
+     os dados estao e as copias automaticas.
+
+  O computador da loja continua funcionando exatamente como antes. Subir
+  para a internet e um PASSO A PARTE, no seu tempo — veja o arquivo
+  SUBIR PARA O RAILWAY.txt.
+
+SE DER ERRADO
+  Copie de volta os arquivos antigos (ou o backup) e abra de novo.
+  O banco (loja.db) nao e alterado de forma que impeca voltar.
+=====================================================================

@@ -1,0 +1,163 @@
+=====================================================================
+  ATUALIZACAO 1.9 -> 1.13  (expedicao: a entrega baixa o estoque)
+=====================================================================
+
+O QUE MUDA
+  - 1.13: EXPEDICAO / ENTREGAS. A venda NAO baixa mais o estoque: ela
+    entra em Operacao -> Expedicao / Entregas como "a entregar", e o
+    estoque baixa quando a expedicao confirma que a mercadoria saiu
+    (toda ou parte, com quem recebeu). No caixa, o pagamento ganhou o
+    campo "Entrega": "Expedicao entrega depois" (padrao) ou "Cliente leva
+    agora" (baixa na hora). Romaneio para imprimir, previsao, endereco do
+    cadastro do cliente, entregas atrasadas no Painel. O PDV so vende o
+    que esta LIVRE (estoque menos o que esta reservado para entregas).
+    Cancelar a venda devolve so o que tinha saido. Vendas anteriores a
+    esta versao ja tinham baixado o estoque e nao entram na expedicao.
+    O padrao (depois/agora) fica em Configuracoes -> Regras de venda.
+    Perfis Gerente e Estoquista ganham a tela sozinhos; para outro perfil,
+    marque "Expedicao / Entregas" em Configuracoes -> Perfis.
+  - 1.12: NCM DOS PRODUTOS. Em Produtos -> botao "NCM dos produtos": mostra
+    quem esta sem NCM (vendidos primeiro) e sugere o codigo pela nota de
+    compra do fornecedor, por produto parecido ja preenchido ou pela
+    descricao (regras de material de construcao). Marque e Aplique em
+    lote; use a lupa para procurar na tabela oficial (10.440 codigos);
+    ou gere a planilha para o contador conferir e importe de volta.
+    O cadastro do produto ganhou a lupa e so aceita NCM que existe.
+    Na tela de NFC-e, o passo a passo mostra quantos produtos vendidos
+    estao sem NCM.
+  - 1.12: VENDA NO CARTAO = NFC-e OBRIGATORIA. Debito ou credito emite a
+    nota sem perguntar; dinheiro e PIX seguem a opcao "Ao fechar a venda"
+    (perguntar ou emitir sozinho). Se a nota do cartao falhar, o caixa ve
+    um aviso vermelho e o aviso semanal destaca "vendas no cartao sem
+    nota". Quem prefere perguntar ate no cartao tem a opcao 3 no select.
+  - 1.12: QUEM VENDE EMITE. Perfis com acesso a Frente de Caixa (Gerente,
+    Operador de Caixa, Vendedor e os seus) ganham a acao "Emitir NFC-e"
+    automaticamente — era o que fazia a venda sair sem nota com a
+    mensagem "Seu perfil nao tem permissao para Emitir NFC-e".
+  - 1.12: ID DO CSC. O exemplo "000001" em cinza no campo do ID confundia
+    (parecia preenchido). Agora o campo diz "nº (ex.: 1)", a tela avisa
+    "FALTA O ID" quando so o codigo esta gravado, e o sistema nao grava o
+    CSC sem o ID. Lembrete: CSC e ID ficam no loja.db — em outro
+    computador precisam ser cadastrados de novo (ou leve o banco).
+  - 1.11: PACOTE DO MES PARA A CONTABILIDADE. Em Operacao -> Entrada de
+    Nota, no fim da tela: escolha o mes, Conferir, Baixar. Sai um ZIP com
+    os XML das notas de compra (compras/), os XML das NFC-e de venda
+    autorizadas (vendas/) e canceladas (vendas/canceladas/, com o evento),
+    uma planilha-resumo e um LEIA-ME para o contador. A partir desta
+    versao o XML de cada nota de compra fica guardado no sistema; as que
+    entraram antes vao na planilha so com a chave (o LEIA-ME explica).
+  - 1.11: AVISO SEMANAL DE NOTAS. Uma vez por semana, ao abrir o sistema,
+    quem cuida da NFC-e ve: compras com nota no mes, quanto passou no
+    cartao, quanto de NFC-e ja foi emitido e o MINIMO a emitir
+    (= cartao + 3% de folga; 30 mil no cartao pedem 30,9 mil de nota).
+    Diz quanto falta e em quantos dias. O mesmo quadro fica em Sistema ->
+    NFC-e, com a regra ajustavel (folga, PIX, dia da semana, desligar).
+    So nota de PRODUCAO conta.
+  - 1.11: SUGESTAO DE COMPRA (Relatorios -> Sugestao de Compra). Os mais
+    vendidos por fornecedor > categoria (ou marca/modelo) > produto, e
+    quanto comprar de cada um pela velocidade de venda: velocidade x
+    (dias de entrega + dias de cobertura) - estoque. Marca URGENTE o que
+    acaba antes da entrega, EXCESSO e PARADO o que esta empatando
+    dinheiro. Botao Planilha gera o pedido por fornecedor no Excel.
+    Produto ganhou o campo "Marca / modelo" (opcional).
+  - 1.10.2: REJEICAO 464 CORRIGIDA. Os hifens fazem parte do CSC (o portal
+    da SEFAZ-BA mostra xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) e a SEFAZ
+    calcula o hash do QR Code com eles. Da 1.9.4 ate a 1.10.1 o sistema
+    tirava os hifens ao gravar — por isso o hash nunca batia. Agora o CSC
+    e gravado exatamente como voce digita (so espaco sai), e na primeira
+    abertura os CSCs que foram gravados sem hifen ganham os hifens de
+    volta sozinhos (na janela preta aparece "Hifens devolvidos ao CSC").
+    Embaixo de cada campo de CSC a tela diz quantos caracteres o codigo
+    guardado tem e se tem hifens — confira com o portal (36, com hifens).
+    Se ainda vier 464: digite o CSC de novo, copiado do portal.
+  - 1.10.1: a mensagem de rejeicao diz por onde a nota foi ([direto] ou
+    [Focus]), o ambiente e o ID do CSC usado. Um print da tela ja conta
+    a historia inteira.
+  - NOVO: emissao pela FOCUS NFe. Em Sistema -> NFC-e -> "Como transmitir",
+    escolha "Pela Focus NFe" e cole os tokens (homologacao e producao) no
+    card Focus NFe. A Focus assina com o certificado que esta NO PAINEL
+    DELA, transmite, numera e devolve chave, protocolo e QR Code. O cupom
+    continua saindo na sua impressora. O caminho direto continua existindo.
+  - Rejeicao 373 (nota de teste): o sistema poe a frase de homologacao
+    no primeiro item sozinho. Nao precisa de produto de teste.
+  - Rejeicao 702: os enderecos da SEFAZ agora apontam para a SEFAZ
+    Virtual do RS (SVRS), que e quem autoriza NFC-e da Bahia. Os que ja
+    estiverem gravados errados no banco sao corrigidos na abertura.
+  - Codigo IBGE de Laje: 2918803 (o antigo 2918605 era Jussiape).
+  - Rejeicao nao consome numero: reenviar uma venda rejeitada usa o
+    mesmo numero, em vez de furar a sequencia.
+  - Venda com acrescimo passa a fechar certo na nota (rejeicao 610).
+  - Certificado em formato antigo da mensagem em portugues.
+  - Rejeicao 394: o QR Code agora vai DENTRO do XML (bloco infNFeSupl).
+    Antes era calculado e impresso, mas nao ia para a SEFAZ.
+  - Rejeicao 883: codigo de barras inventado (sem digito verificador
+    valido) sai como SEM GTIN em vez de derrubar a nota.
+  - As rejeicoes passam a dizer QUAL produto deu problema.
+  - Em Sistema -> NFC-e, nota rejeitada agora tem o botao REENVIAR
+    (a tela do PDV sempre mandou reenviar la, mas o botao nao existia)
+    e o botao XML, para ver exatamente o que foi enviado.
+  - CSC blindado: o ID do CSC so aceita numero (ex.: 000001) e o CSC
+    entra sem espaco (mas COM os hifens, que fazem parte dele). Trocar
+    os dois de campo, ou colar algo errado, e recusado na hora — antes
+    era gravado e a SEFAZ derrubava a nota no schema (rejeicao 225).
+  - QR Code alinhado ao padrao das bibliotecas de referencia (hash em
+    maiusculas, texto puro no XML).
+  - DOIS CSCs guardados, um de homologacao e um de producao. O sistema
+    usa o par certo conforme o Ambiente. O CSC que ja estava cadastrado
+    vai automaticamente para a coluna do ambiente que estava ligado.
+  - QR Code versao 3 (NT 2025.001) implementado do jeito certo no modo
+    normal: chave|3|ambiente, sem CSC. Antes mandava o ambiente vazio e
+    a SEFAZ derrubava no schema (225). A versao 2 continua a recomendada.
+
+ATENCAO - JANEIRO DE 2027
+  A reforma tributaria (IBS/CBS) passa a ser exigida na NFC-e do Simples
+  Nacional em 04/01/2027. O sistema vai precisar de atualizacao antes
+  disso. Em 2026 a nota sai certa sem esses campos.
+
+COMO ATUALIZAR  (no computador onde o sistema esta instalado)
+  1. Feche o sistema: a janela preta do iniciar.bat.
+  2. Faca um backup: copie o arquivo loja.db para um pen drive ou
+     outra pasta. (Ele NAO esta neste zip, de proposito.)
+  3. Copie TODOS os arquivos deste zip por cima da pasta do sistema,
+     substituindo os que ja existem.
+     NAO apague a pasta node_modules e NAO apague o loja.db.
+  4. Abra pelo iniciar.bat. Na janela preta tem que aparecer:
+        VERSAO 1.13 - Expedicao: a entrega baixa o estoque
+        Tabela NCM carregada: 10440 codigos.
+        Perfis ajustados: N (quem vende agora emite NFC-e).   <- se havia perfil sem a acao
+        Hifens devolvidos ao CSC (producao).   <- se o CSC estava sem hifen
+        Configuracao da NFC-e corrigida em N campo(s).
+  5. Na tela, o topo mostra v1.13. Em Sistema -> NFC-e -> CSC, embaixo
+     do campo de producao tem que estar "36 caracteres, com hifens".
+     Se estiver diferente do que o portal da SEFAZ mostra, digite o CSC
+     de novo (copiado do portal) e Salvar.
+  5b. Em Sistema -> NFC-e -> Notas emitidas, clique em REENVIAR na
+     venda que ficou com a rejeicao 464.
+  5c. Perfis de acesso que nao sao o administrador: em Configuracoes ->
+     Perfis, marque "Sugestao de Compra" para quem deve ver o relatorio.
+     O aviso semanal e o pacote aparecem para quem tem acesso a
+     "NFC-e / Certificado digital". "Emitir NFC-e" ja vai marcado para
+     quem tem Frente de Caixa; os usuarios precisam sair e entrar de novo.
+  5e. EXPEDICAO: a partir de agora toda venda fica "a entregar" ate a
+     expedicao confirmar em Operacao -> Expedicao / Entregas. Se na sua
+     loja o normal e o cliente levar na hora, troque o padrao em
+     Configuracoes -> Regras de venda -> "Cliente leva na hora" (o caixa
+     continua podendo escolher venda a venda).
+  5d. NCM: Produtos -> "NCM dos produtos". Comece pelo filtro "Vendidos nos
+     ultimos 180 dias, sem NCM" (sao os que vao na nota). Marque as
+     sugestoes da nota de compra e de produto parecido, confira as por
+     palavra-chave, Aplicar. O resto: lupa ou planilha para o contador.
+  6. PARA USAR A FOCUS: Sistema -> NFC-e -> "Como transmitir" -> Pela
+     Focus NFe -> Salvar. No card Focus NFe, cole o token de homologacao
+     (e o de producao, se ja tiver) -> Salvar. Clique em "Testar Focus":
+     tem que dizer "token aceito". Faca a venda de teste.
+     Antes disso, no painel da Focus (app.focusnfe.com.br) a empresa
+     precisa estar cadastrada com o certificado A1 e o CSC de cada
+     ambiente — sem isso a Focus recusa.
+  6. As vendas antigas que ficaram sem nota: Sistema -> NFC-e ->
+     botao Reenviar em cada uma.
+
+SE DER ERRADO
+  Copie de volta os arquivos antigos (ou o backup) e abra de novo.
+  O banco (loja.db) nao e alterado de forma que impeca voltar.
+=====================================================================
