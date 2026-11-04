@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistema de Vendas — Material de Construção</title>
+<link rel="stylesheet" href="css/estilo.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
+</head>
+<body>
+
+<!-- ====================== LOGIN ====================== -->
+<div id="telaLogin">
+  <form class="login-box" onsubmit="entrar(event)">
+    <div class="login-logo">🧱</div>
+    <h1>Sistema de Vendas</h1>
+    <p class="sub">Loja de material de construção</p>
+
+    <div class="campo" style="margin-bottom:12px">
+      <label>Usuário</label>
+      <input id="loginUsuario" autocomplete="username" autofocus required>
+    </div>
+    <div class="campo" style="margin-bottom:18px">
+      <label>Senha</label>
+      <input id="loginSenha" type="password" autocomplete="current-password" required>
+    </div>
+
+    <div id="loginErro" class="aviso erro" style="display:none"></div>
+
+    <button class="btn primario" style="width:100%;justify-content:center;padding:11px" type="submit">Entrar</button>
+    <p id="loginDicaPadrao" style="margin-top:16px;font-size:11.5px;color:var(--texto-fraco);text-align:center">
+      Primeiro acesso: <strong>admin</strong> / <strong>admin</strong><br>
+      Troque a senha em Configurações.
+    </p>
+    <p id="loginRodapeInternet" style="display:none;margin-top:16px;font-size:11.5px;color:var(--texto-fraco);text-align:center">
+      🔒 Conexão segura · <span id="loginVersao"></span>
+    </p>
+  </form>
+</div>
+
+<!-- ====================== APP ====================== -->
+<div id="app">
+
+  <header class="topo">
+    <button class="icone" id="btnMenu" onclick="document.querySelector('.menu').classList.toggle('aberto')">☰</button>
+    <div class="marca">🧱 <span id="topoFantasia">Material de Construção</span> <span class="tag">PDV</span> <span id="topoVersao" style="font-size:10.5px;font-weight:400;opacity:.75"></span></div>
+    <div class="espaco"></div>
+    <div id="topoCaixa"></div>
+    <div class="info">
+      <div id="topoUsuario"></div>
+      <div class="nome-empresa" id="topoData"></div>
+    </div>
+    <button class="icone" title="Sair" onclick="sair()">⏻</button>
+  </header>
+
+  <div class="corpo">
+    <nav class="menu">
+      <div class="grupo-tit">Operação</div>
+      <a data-secao="dashboard" onclick="irPara('dashboard')"><span class="ic">📊</span> Painel</a>
+      <a data-secao="pdv" onclick="irPara('pdv')"><span class="ic">🛒</span> Frente de Caixa</a>
+      <a data-secao="vendas" onclick="irPara('vendas')"><span class="ic">🧾</span> Vendas / Cupons</a>
+      <a data-secao="orcamentos" onclick="irPara('orcamentos')"><span class="ic">📝</span> Orçamentos</a>
+      <a data-secao="caixa" onclick="irPara('caixa')"><span class="ic">💵</span> Caixa</a>
+      <a data-secao="entradaNota" onclick="irPara('entradaNota')"><span class="ic">📥</span> Entrada de Nota</a>
+      <a data-secao="expedicao" onclick="irPara('expedicao')"><span class="ic">🚚</span> Expedição / Entregas <span class="badge" id="badgeEntregas" style="display:none"></span></a>
+      <a data-secao="obras" onclick="irPara('obras')"><span class="ic">🏗️</span> Obras</a>
+
+      <div class="grupo-tit">Financeiro</div>
+      <a data-secao="receber" onclick="irPara('receber')"><span class="ic">📆</span> Contas a Receber <span class="badge" id="badgeVencidos" style="display:none"></span></a>
+      <a data-secao="cartao" onclick="irPara('cartao')"><span class="ic">💳</span> Recebíveis de Cartão <span class="badge" id="badgeCartao" style="display:none"></span></a>
+      <a data-secao="pagar" onclick="irPara('pagar')"><span class="ic">💸</span> Contas a Pagar <span class="badge" id="badgePagar" style="display:none"></span></a>
+      <a data-secao="fluxo" onclick="irPara('fluxo')"><span class="ic">⚖️</span> Fluxo de Caixa</a>
+
+      <div class="grupo-tit">Cadastros</div>
+      <a data-secao="produtos" onclick="irPara('produtos')"><span class="ic">📦</span> Produtos</a>
+      <a data-secao="estoque" onclick="irPara('estoque')"><span class="ic">🏗️</span> Estoque</a>
+      <a data-secao="clientes" onclick="irPara('clientes')"><span class="ic">👥</span> Clientes</a>
+      <a data-secao="fornecedores" onclick="irPara('fornecedores')"><span class="ic">🚚</span> Fornecedores</a>
+      <a data-secao="operadoras" onclick="irPara('operadoras')"><span class="ic">🏧</span> Maquininhas</a>
+
+      <div class="grupo-tit">Relatórios</div>
+      <a data-secao="relVendas" onclick="irPara('relVendas')"><span class="ic">📈</span> Vendas</a>
+      <a data-secao="relProdutos" onclick="irPara('relProdutos')"><span class="ic">🏆</span> Produtos / Curva ABC</a>
+      <a data-secao="relClientes" onclick="irPara('relClientes')"><span class="ic">🤝</span> Clientes</a>
+      <a data-secao="relDespesas" onclick="irPara('relDespesas')"><span class="ic">📉</span> Despesas</a>
+      <a data-secao="relCompras" onclick="irPara('relCompras')"><span class="ic">🛒</span> Sugestão de Compra</a>
+
+      <div class="grupo-tit">Sistema</div>
+      <a data-secao="fiscal" onclick="irPara('fiscal')"><span class="ic">🏛️</span> NFC-e / Certificado <span class="badge" id="badgeCert" style="display:none"></span></a>
+      <a data-secao="config" onclick="irPara('config')"><span class="ic">⚙️</span> Configurações</a>
+    </nav>
+
+    <main class="conteudo">
+
+      <!-- ============ PAINEL ============ -->
+      <section class="secao" id="sec-dashboard">
+        <div class="cabecalho-secao">
+          <div><h2>Painel</h2><div class="desc">Resumo do movimento da loja</div></div>
+          <div class="acoes"><button class="btn" onclick="carregarDashboard()">🔄 Atualizar</button></div>
+        </div>
+        <div id="dashAviso"></div>
+        <div class="grid g4" id="dashTiles" style="margin-bottom:16px"></div>
+        <div class="grid g2">
+          <div class="card">
+            <h3>📅 Vendas dos últimos 7 dias</h3>
+            <div id="dashGrafico"></div>
+          </div>
+          <div class="card">
+            <h3>🏆 Mais vendidos no mês</h3>
+            <div class="tabela-wrap" id="dashTop"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>⚠️ Produtos no estoque mínimo <span class="acoes"><button class="btn pequeno" onclick="irPara('estoque')">Ver estoque</button></span></h3>
+          <div class="tabela-wrap" id="dashCriticos"></div>
+        </div>
+      </section>
+
+      <!-- ============ PDV ============ -->
+      <section class="secao" id="sec-pdv">
+        <div id="pdvAvisoCaixa"></div>
+
+        <div class="pdv-busca">
+          <div class="campo p">
+            <label>Qtd.</label>
+            <input id="pdvQtd" value="1" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('pdvCodigo').focus();}">
+          </div>
+          <div class="campo g" style="flex:1">
+            <label>Código de barras, código interno ou nome do produto</label>
+            <input id="pdvCodigo" placeholder="Bipe o produto ou digite e tecle Enter" autocomplete="off"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();pdvBuscar();}">
+          </div>
+          <button class="btn laranja" style="padding:12px 18px" onclick="pdvBuscar()">🔍 Buscar (F2)</button>
+        </div>
+
+        <div class="pdv">
+          <div>
+            <div class="pdv-itens">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width:40px">#</th>
+                    <th>Produto</th>
+                    <th class="num" style="width:90px">Qtd.</th>
+                    <th class="num" style="width:100px">V. Unit.</th>
+                    <th class="num" style="width:90px">Desc.</th>
+                    <th class="num" style="width:110px">Total</th>
+                    <th style="width:92px"></th>
+                  </tr>
+                </thead>
+                <tbody id="pdvItens"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <aside class="pdv-lateral">
+            <div class="pdv-total">
+              <div class="rot">Total da venda</div>
+              <div class="valor" id="pdvTotal">R$ 0,00</div>
+              <div class="l"><span>Itens</span><span id="pdvQtdItens">0</span></div>
+              <div class="l"><span>Subtotal</span><span id="pdvSubtotal">R$ 0,00</span></div>
+              <div class="l"><span>Desconto</span><span id="pdvDescontoLbl">R$ 0,00</span></div>
+              <div class="l grande"><span>Último item</span><span id="pdvUltimo">—</span></div>
+            </div>
+
+            <div class="pdv-cliente">
+              <div class="nome" id="pdvClienteNome">CONSUMIDOR</div>
+              <div class="det" id="pdvClienteDet">Venda sem identificação de cliente</div>
+              <div style="display:flex;gap:6px;margin-top:9px">
+                <button class="btn pequeno" style="flex:1;justify-content:center" onclick="abrirBuscaCliente()">👥 Cliente (F3)</button>
+                <button class="btn pequeno" onclick="pdvLimparCliente()" title="Tirar o cliente">✖</button>
+              </div>
+              <div id="pdvCpfNota" style="display:none;margin-top:9px">
+                <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">
+                  CPF/CNPJ na nota (F7)</label>
+                <input id="pdv_cpf_nota" inputmode="numeric" placeholder="opcional"
+                       style="width:100%" oninput="pdvConferirCpf()">
+                <div class="dica" id="pdvCpfAviso">Deixe em branco para “consumidor não identificado”.</div>
+              </div>
+            </div>
+
+            <div class="pdv-acoes">
+              <button class="btn full laranja" onclick="abrirPagamento()">💰 FINALIZAR (F9)</button>
+              <button class="btn" onclick="pdvDesconto()">🏷️ Desconto (F4)</button>
+              <button class="btn" onclick="pdvRemoverUltimo()">↩️ Tirar item (F8)</button>
+              <button class="btn" onclick="pdvObservacao()">📝 Observação</button>
+              <button class="btn perigo" onclick="pdvCancelar()">🗑️ Cancelar venda</button>
+            </div>
+
+            <div class="atalhos-teclado">
+              <kbd>F2</kbd> buscar produto &nbsp; <kbd>F3</kbd> cliente<br>
+              <kbd>F4</kbd> desconto &nbsp; <kbd>F8</kbd> tirar último item<br>
+              <kbd>F9</kbd> finalizar &nbsp; <kbd>Esc</kbd> fechar janelas<br>
+              Digite <strong>3*</strong> antes do código para 3 unidades.
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============ VENDAS ============ -->
+      <section class="secao" id="sec-vendas">
+        <div class="cabecalho-secao">
+          <div><h2>Vendas / Cupons</h2><div class="desc">Consulta, 2ª via do cupom e cancelamento</div></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosVendas"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="vendasDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="vendasAte"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="vendasSituacao">
+                <option value="todas">Todas</option>
+                <option value="finalizada" selected>Finalizadas</option>
+                <option value="cancelada">Canceladas</option>
+              </select>
+            </div>
+            <div class="campo"><label>Buscar</label><input id="vendasBusca" placeholder="Nº do cupom ou cliente"></div>
+            <button class="btn primario" onclick="carregarVendas()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="grid g4" id="vendasTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="vendasLista"></div>
+      </section>
+
+      <!-- ============ CAIXA ============ -->
+      <section class="secao" id="sec-caixa">
+        <div class="cabecalho-secao">
+          <div><h2>Caixa</h2><div class="desc">Abertura, sangria, suprimento e fechamento</div></div>
+          <div class="acoes" id="caixaBotoes"></div>
+        </div>
+        <div id="caixaAtual"></div>
+        <div class="card">
+          <h3>📚 Caixas anteriores</h3>
+          <div class="tabela-wrap" id="caixaHistorico"></div>
+        </div>
+      </section>
+
+      <!-- ============ RECEBER ============ -->
+      <section class="secao" id="sec-receber">
+        <div class="cabecalho-secao">
+          <div><h2>Contas a Receber</h2><div class="desc">Parcelas do crediário</div></div>
+        </div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>Vencimento de</label><input type="date" id="recDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="recAte"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="recSituacao">
+                <option value="aberto" selected>Em aberto</option>
+                <option value="vencido">Vencidos</option>
+                <option value="vence_hoje">Vencem hoje</option>
+                <option value="pago">Recebidos</option>
+                <option value="todas">Todos</option>
+              </select>
+            </div>
+            <div class="campo"><label>Cliente / documento</label><input id="recBusca"></div>
+            <button class="btn primario" onclick="carregarReceber()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="grid g4" id="recTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="recLista"></div>
+      </section>
+
+      <!-- ============ ORÇAMENTOS ============ -->
+      <section class="secao" id="sec-orcamentos">
+        <div class="cabecalho-secao">
+          <div><h2>Orçamentos</h2><div class="desc">Proposta de preço para o cliente — não mexe no estoque</div></div>
+          <div class="acoes"><button class="btn laranja" onclick="abrirOrcamento()">➕ Novo orçamento</button></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosOrc"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="orcDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="orcAte"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="orcSituacao">
+                <option value="todas">Todos</option>
+                <option value="aberto" selected>Em aberto</option>
+                <option value="fechado">Viraram venda</option>
+                <option value="expirado">Vencidos</option>
+                <option value="cancelado">Cancelados</option>
+              </select>
+            </div>
+            <div class="campo"><label>Cliente ou nº</label>
+              <input id="orcBusca" onkeydown="if(event.key==='Enter')carregarOrcamentos()"></div>
+            <button class="btn primario" onclick="carregarOrcamentos()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="grid g4" id="orcTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="orcLista"></div>
+      </section>
+
+      <!-- ============ ENTRADA DE NOTA ============ -->
+      <section class="secao" id="sec-entradaNota">
+        <div class="cabecalho-secao">
+          <div><h2>Entrada de Nota</h2><div class="desc">Leia o XML da nota do fornecedor e dê entrada no estoque</div></div>
+        </div>
+
+        <div class="card">
+          <h3>📥 Ler o XML da nota</h3>
+          <div class="aviso info">
+            <span>ℹ️</span>
+            <div>Use o arquivo <strong>.xml</strong> que o fornecedor manda por e-mail junto com o DANFE
+            (o papel impresso não serve — é do XML que saem os produtos, o custo e as parcelas).
+            Se não recebeu, dá para baixar no site da SEFAZ com a chave de acesso de 44 dígitos.</div>
+          </div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo g">
+              <label>Arquivo XML da NF-e</label>
+              <input type="file" id="nfArquivo" accept=".xml" onchange="analisarNota()">
+            </div>
+          </div>
+        </div>
+
+        <div id="nfPreview"></div>
+
+        <div class="card">
+          <h3>📚 Notas que já entraram
+            <span class="acoes"><button class="btn pequeno" onclick="carregarHistoricoNotas()">🔄</button></span>
+          </h3>
+          <div class="linha" style="align-items:flex-end">
+            <div class="campo m"><label>De</label><input type="date" id="nfDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="nfAte"></div>
+            <div class="campo"><label>Fornecedor ou nº da nota</label>
+              <input id="nfBusca" onkeydown="if(event.key==='Enter')carregarHistoricoNotas()"></div>
+            <button class="btn primario" onclick="carregarHistoricoNotas()">🔍 Consultar</button>
+          </div>
+          <div class="tabela-wrap" id="nfHistorico"></div>
+        </div>
+
+        <!-- [1.11] pacote mensal para a contabilidade -->
+        <div class="card" id="cardPacoteContabil" style="display:none">
+          <h3>📦 Pacote do mês para a contabilidade</h3>
+          <div class="aviso info">
+            <span>🧾</span>
+            <div>Virou o mês, gere o pacote e mande para o contador: um <strong>ZIP</strong> com os
+            <strong>XML das notas de compra</strong> (NF-e que entraram aqui) e os
+            <strong>XML das NFC-e de venda</strong> autorizadas e canceladas, mais uma planilha-resumo.
+            Só entram notas de <strong>produção</strong>; as de homologação (teste) ficam de fora.</div>
+          </div>
+          <div class="linha" style="align-items:flex-end">
+            <div class="campo m"><label>Mês</label>
+              <select id="pacMes" onchange="conferirPacoteContabil()"></select></div>
+            <button class="btn" onclick="conferirPacoteContabil()">🔍 Conferir</button>
+          </div>
+          <div id="pacPrevia"></div>
+        </div>
+      </section>
+
+      <!-- ============ [1.13] EXPEDIÇÃO / ENTREGAS ============ -->
+      <section class="secao" id="sec-expedicao">
+        <div class="cabecalho-secao">
+          <div><h2>Expedição / Entregas</h2>
+            <div class="desc">A venda só baixa o estoque quando a entrega é confirmada aqui</div></div>
+          <div class="acoes"><button class="btn primario" onclick="carregarExpedicao()">🔄 Atualizar</button></div>
+        </div>
+        <div id="expResumo"></div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end">
+            <div class="campo m"><label>Mostrar</label>
+              <select id="expSituacao" onchange="carregarExpedicao()">
+                <option value="abertas">A entregar (pendentes e parciais)</option>
+                <option value="pendente">Só pendentes</option>
+                <option value="parcial">Só parciais</option>
+                <option value="entregue">Entregues</option>
+                <option value="cancelada">Canceladas</option>
+                <option value="todas">Todas</option>
+              </select></div>
+            <div class="campo m"><label>Venda de</label><input type="date" id="expDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="expAte"></div>
+            <div class="campo"><label>Cliente, nº do cupom ou endereço</label>
+              <input id="expBusca" onkeydown="if(event.key==='Enter')carregarExpedicao()"></div>
+            <label class="check" style="padding-bottom:9px"><input type="checkbox" id="expAtrasadas" onchange="carregarExpedicao()"> Só atrasadas</label>
+            <button class="btn primario" onclick="carregarExpedicao()">🔍</button>
+          </div>
+          <div class="tabela-wrap" id="expLista"></div>
+        </div>
+      </section>
+
+      <!-- ============ RECEBÍVEIS DE CARTÃO ============ -->
+      <section class="secao" id="sec-cartao">
+        <div class="cabecalho-secao">
+          <div><h2>Recebíveis de Cartão</h2><div class="desc">O que as maquininhas ainda têm para depositar</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="irPara('operadoras')">🏧 Maquininhas</button>
+            <button class="btn verde" onclick="baixarLoteCartao()">✅ Dar baixa nas marcadas</button>
+          </div>
+        </div>
+        <div id="cartaoAviso"></div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosCartao"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>Previsão de</label><input type="date" id="crDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="crAte"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="crSituacao">
+                <option value="aberto" selected>A receber</option>
+                <option value="atrasado">Atrasados</option>
+                <option value="cai_hoje">Caem hoje</option>
+                <option value="recebido">Já recebidos</option>
+                <option value="todas">Todos</option>
+              </select>
+            </div>
+            <div class="campo m"><label>Maquininha</label><select id="crOperadora"></select></div>
+            <div class="campo m"><label>Modalidade</label>
+              <select id="crForma">
+                <option value="">Todas</option>
+                <option value="CARTAO DEBITO">Débito</option>
+                <option value="CARTAO CREDITO">Crédito</option>
+              </select>
+            </div>
+            <button class="btn primario" onclick="carregarCartao()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="grid g4" id="crTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="crLista"></div>
+      </section>
+
+      <!-- ============ MAQUININHAS ============ -->
+      <section class="secao" id="sec-operadoras">
+        <div class="cabecalho-secao">
+          <div><h2>Maquininhas</h2><div class="desc">Taxas e prazos de cada operadora de cartão</div></div>
+          <div class="acoes"><button class="btn laranja" onclick="abrirOperadora()">➕ Nova maquininha</button></div>
+        </div>
+        <div class="aviso info">
+          <span>💡</span>
+          <div>Cadastre aqui a taxa e o prazo que cada maquininha pratica. A partir daí, toda venda
+          no cartão vira parcela em <strong>Recebíveis de Cartão</strong>, já com a taxa descontada e
+          a data prevista do depósito. Marque uma como <strong>padrão</strong> para não precisar
+          escolher a cada venda.</div>
+        </div>
+        <div class="tabela-wrap" id="opLista"></div>
+      </section>
+
+      <!-- ============ OBRAS (1.16) ============ -->
+      <section class="secao" id="sec-obras">
+        <div class="cabecalho-secao">
+          <div><h2>Obras</h2><div class="desc">Material que sai (a preço de custo) para as obras do dono e o saldo a acertar com a loja</div></div>
+          <div class="acoes">
+            <select id="obraStatus" onchange="carregarObras()" style="padding:8px 10px;border:1px solid var(--cinza-linha);border-radius:6px">
+              <option value="">Todas as obras</option>
+              <option value="andamento">Em andamento</option>
+              <option value="concluida">Concluídas</option>
+            </select>
+            <button class="btn laranja" onclick="abrirCadObra()">➕ Nova obra</button>
+          </div>
+        </div>
+        <div class="grid g4" id="obrasTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="obrasLista"></div>
+      </section>
+
+      <!-- ============ CONTAS A PAGAR ============ -->
+      <section class="secao" id="sec-pagar">
+        <div class="cabecalho-secao">
+          <div><h2>Contas a Pagar</h2><div class="desc">Fornecedores, despesas fixas e parcelamentos</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="abrirCategoriasCp()">🗂️ Categorias</button>
+            <button class="btn laranja" onclick="abrirConta()">➕ Lançar conta</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosPagar"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>Vencimento de</label><input type="date" id="cpDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="cpAte"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="cpSituacao">
+                <option value="aberto" selected>Em aberto</option>
+                <option value="vencido">Vencidas</option>
+                <option value="vence_hoje">Vencem hoje</option>
+                <option value="pago">Pagas</option>
+                <option value="todas">Todas</option>
+              </select>
+            </div>
+            <div class="campo m"><label>Categoria</label><select id="cpCategoria"></select></div>
+            <div class="campo"><label>Fornecedor / documento</label><input id="cpBusca" onkeydown="if(event.key==='Enter')carregarPagar()"></div>
+            <button class="btn primario" onclick="carregarPagar()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="grid g4" id="cpTotais" style="margin-bottom:14px"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px">
+          <button class="btn pequeno" id="cpBtnAgrupar" onclick="alternarAgruparCp()">👥 Agrupar por fornecedor</button>
+        </div>
+        <div class="tabela-wrap" id="cpLista"></div>
+      </section>
+
+      <!-- ============ FLUXO DE CAIXA ============ -->
+      <section class="secao" id="sec-fluxo">
+        <div class="cabecalho-secao">
+          <div><h2>Fluxo de Caixa</h2><div class="desc">O que entra contra o que sai, por prazo e por mês</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="carregarFluxo()">🔄 Atualizar</button>
+            <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div id="fluxoSaida"></div>
+      </section>
+
+      <!-- ============ FORNECEDORES ============ -->
+      <section class="secao" id="sec-fornecedores">
+        <div class="cabecalho-secao">
+          <div><h2>Fornecedores</h2><div class="desc">Quem abastece a loja e quanto ainda se deve</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="abrirImportacao('fornecedores')">📥 Importar planilha</button>
+            <button class="btn laranja" onclick="abrirFornecedor()">➕ Novo fornecedor</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo"><label>Buscar</label><input id="fornBusca" placeholder="Nome, CNPJ ou telefone" onkeydown="if(event.key==='Enter')carregarFornecedores()"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="fornStatus"><option value="ativo">Ativos</option><option value="todos">Todos</option><option value="inativo">Inativos</option></select>
+            </div>
+            <button class="btn primario" onclick="carregarFornecedores()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="tabela-wrap" id="fornLista"></div>
+      </section>
+
+      <!-- ============ RELATÓRIO DESPESAS ============ -->
+      <section class="secao" id="sec-relDespesas">
+        <div class="cabecalho-secao">
+          <div><h2>Despesas</h2><div class="desc">Para onde está indo o dinheiro da loja</div></div>
+          <div class="acoes"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosRelDesp"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="relDDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="relDAte"></div>
+            <button class="btn primario" onclick="carregarRelDespesas()">🔍 Gerar</button>
+          </div>
+        </div>
+        <div id="relDespesasSaida"></div>
+      </section>
+
+      <!-- ============ PRODUTOS ============ -->
+      <section class="secao" id="sec-produtos">
+        <div class="cabecalho-secao">
+          <div><h2>Produtos</h2><div class="desc">Cadastro, preços e estoque mínimo</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="irPara('ncm')" title="Código fiscal dos produtos (vai na NFC-e)">🏷️ NCM dos produtos</button>
+            <button class="btn" onclick="abrirImportacao('produtos')">📥 Importar planilha</button>
+            <button class="btn" onclick="abrirReajuste()">📈 Reajustar preços</button>
+            <button class="btn" onclick="abrirCategorias()">🗂️ Categorias</button>
+            <button class="btn laranja" onclick="abrirProduto()">➕ Novo produto</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo"><label>Buscar</label><input id="prodBusca" placeholder="Nome, código ou código de barras" onkeydown="if(event.key==='Enter')carregarProdutos()"></div>
+            <div class="campo m"><label>Categoria</label><select id="prodCategoria"></select></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="prodAtivo"><option value="1">Ativos</option><option value="todos">Todos</option></select>
+            </div>
+            <div class="campo p" style="max-width:180px">
+              <label class="check" style="margin-top:18px"><input type="checkbox" id="prodCriticos"> Só estoque baixo</label>
+            </div>
+            <button class="btn primario" onclick="carregarProdutos()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="tabela-wrap" id="prodLista"></div>
+      </section>
+
+      <!-- ============ ESTOQUE ============ -->
+      <section class="secao" id="sec-estoque">
+        <div class="cabecalho-secao">
+          <div><h2>Estoque</h2><div class="desc">Entradas, saídas e ajustes com histórico</div></div>
+          <div class="acoes">
+            <button class="btn verde" onclick="abrirMovEstoque('entrada')">⬆️ Entrada</button>
+            <button class="btn" onclick="abrirMovEstoque('saida')">⬇️ Saída</button>
+            <button class="btn" onclick="abrirMovEstoque('ajuste')">🔧 Ajuste</button>
+          </div>
+        </div>
+        <div class="grid g3" id="estoqueTiles" style="margin-bottom:16px"></div>
+        <div class="card">
+          <h3>🚨 Produtos no ou abaixo do mínimo</h3>
+          <div class="tabela-wrap" id="estoqueCriticos"></div>
+        </div>
+        <div class="card">
+          <h3>📜 Histórico de movimentações
+            <span class="acoes">
+              <select id="movTipo" style="padding:5px 8px;border:1px solid var(--cinza-linha);border-radius:6px">
+                <option value="">Todos os tipos</option>
+                <option value="entrada">Entradas</option>
+                <option value="saida">Saídas</option>
+                <option value="ajuste">Ajustes</option>
+              </select>
+              <button class="btn pequeno" onclick="carregarMovimentos()">🔄</button>
+            </span>
+          </h3>
+          <div class="tabela-wrap" id="estoqueMovimentos"></div>
+        </div>
+      </section>
+
+      <!-- ============ CLIENTES ============ -->
+      <section class="secao" id="sec-clientes">
+        <div class="cabecalho-secao">
+          <div><h2>Clientes</h2><div class="desc">Cadastro, limite de crédito e saldo devedor</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="abrirImportacao('clientes')">📥 Importar planilha</button>
+            <button class="btn laranja" onclick="abrirCliente()">➕ Novo cliente</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo"><label>Buscar</label><input id="cliBusca" placeholder="Nome, CPF/CNPJ ou telefone" onkeydown="if(event.key==='Enter')carregarClientes()"></div>
+            <div class="campo m"><label>Situação</label>
+              <select id="cliStatus"><option value="ativo">Ativos</option><option value="todos">Todos</option><option value="inativo">Inativos</option></select>
+            </div>
+            <button class="btn primario" onclick="carregarClientes()">🔍 Consultar</button>
+          </div>
+        </div>
+        <div class="tabela-wrap" id="cliLista"></div>
+      </section>
+
+      <!-- ============ RELATÓRIO VENDAS ============ -->
+      <section class="secao" id="sec-relVendas">
+        <div class="cabecalho-secao">
+          <div><h2>Relatório de Vendas</h2><div class="desc">Totais por dia, forma de pagamento e vendedor</div></div>
+          <div class="acoes"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosRelVendas"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="relVDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="relVAte"></div>
+            <button class="btn primario" onclick="carregarRelVendas()">🔍 Gerar</button>
+          </div>
+        </div>
+        <div id="relVendasSaida"></div>
+      </section>
+
+      <!-- ============ RELATÓRIO PRODUTOS ============ -->
+      <section class="secao" id="sec-relProdutos">
+        <div class="cabecalho-secao">
+          <div><h2>Produtos Vendidos / Curva ABC</h2><div class="desc">O que puxa o faturamento da loja</div></div>
+          <div class="acoes"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosRelProd"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="relPDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="relPAte"></div>
+            <button class="btn primario" onclick="carregarRelProdutos()">🔍 Gerar</button>
+          </div>
+        </div>
+        <div id="relProdutosSaida"></div>
+      </section>
+
+      <!-- ============ [1.12] NCM DOS PRODUTOS ============ -->
+      <section class="secao" id="sec-ncm">
+        <div class="cabecalho-secao">
+          <div><h2>NCM dos produtos</h2>
+            <div class="desc">O código fiscal de cada produto — vai em cada item da NFC-e</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="irPara('produtos')">← Produtos</button>
+            <button class="btn" onclick="baixarPlanilhaNcm()" title="Planilha com NCM atual e sugestões, para o contador conferir e importar de volta">📊 Planilha para o contador</button>
+            <button class="btn" onclick="abrirImportacao('produtos')">📥 Importar planilha</button>
+            <button class="btn primario" onclick="carregarNcm()">🔄 Atualizar</button>
+          </div>
+        </div>
+
+        <div class="aviso info">
+          <span>🏷️</span>
+          <div>Produto <strong>sem NCM</strong> sai na nota com o NCM padrão da loja — um código genérico,
+          que não descreve o produto. Isso passa na SEFAZ, mas é o tipo de coisa que a fiscalização cobra.
+          Aqui o sistema mostra quem está sem NCM, <strong>sugere</strong> um código (pela nota de compra do
+          fornecedor, por produto parecido já preenchido ou pela descrição) e aplica em lote.
+          <strong>Sugestão é sugestão</strong>: confira a descrição do código antes de aplicar — e, na dúvida,
+          mande a planilha para o contador.</div>
+        </div>
+
+        <div id="ncmResumo"></div>
+
+        <div class="card">
+          <div class="linha" style="align-items:flex-end">
+            <div class="campo m"><label>Mostrar</label>
+              <select id="ncmFiltro" onchange="renderNcm()">
+                <option value="pendentes">Sem NCM ou inválido (vendidos primeiro)</option>
+                <option value="vendidos">Vendidos nos últimos 180 dias, sem NCM</option>
+                <option value="sugestao">Só os que têm sugestão</option>
+                <option value="sem_sugestao">Sem NCM e sem sugestão</option>
+                <option value="divergente">NCM diferente do que veio na nota de compra</option>
+                <option value="ok">Com NCM válido</option>
+                <option value="todos">Todos</option>
+              </select></div>
+            <div class="campo"><label>Procurar</label>
+              <input id="ncmBusca" placeholder="descrição ou código do produto" onkeydown="if(event.key==='Enter')renderNcm()"></div>
+            <button class="btn" onclick="renderNcm()">🔍</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <button class="btn pequeno" onclick="marcarSugestoes('nota')">☑️ Marcar as da nota de compra</button>
+            <button class="btn pequeno" onclick="marcarSugestoes('parecido')">☑️ Marcar as de produto parecido</button>
+            <button class="btn pequeno" onclick="marcarSugestoes('palavra')">☑️ Marcar as por palavra-chave</button>
+            <button class="btn pequeno" onclick="marcarSugestoes('')">⬜ Desmarcar tudo</button>
+            <span style="flex:1"></span>
+            <button class="btn verde" id="btnAplicarNcm" onclick="aplicarNcmMarcados()">✅ Aplicar marcados (0)</button>
+          </div>
+          <div class="tabela-wrap" id="ncmTabela"></div>
+          <div style="text-align:center;margin-top:10px"><button class="btn" id="btnNcmMais" onclick="NCM_PAGINA++; renderNcm(true)" style="display:none">Mostrar mais</button></div>
+        </div>
+      </section>
+
+      <!-- ============ [1.11] SUGESTÃO DE COMPRA ============ -->
+      <section class="secao" id="sec-relCompras">
+        <div class="cabecalho-secao">
+          <div><h2>Sugestão de Compra</h2>
+            <div class="desc">Mais vendidos por fornecedor e o que comprar pela velocidade de venda — sem empatar dinheiro</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="exportarSugestaoCompra()">📊 Planilha (pedido por fornecedor)</button>
+            <button class="btn" onclick="window.print()">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>Olhar as vendas de</label>
+              <select id="scDias">
+                <option value="30">últimos 30 dias</option>
+                <option value="60">últimos 60 dias</option>
+                <option value="90" selected>últimos 90 dias</option>
+                <option value="180">últimos 180 dias</option>
+                <option value="365">último ano</option>
+              </select></div>
+            <div class="campo p"><label>Estoque para (dias)</label>
+              <input id="scCobertura" inputmode="numeric" value="30">
+              <div class="dica">Quantos dias de venda o estoque deve cobrir.</div></div>
+            <div class="campo p"><label>Entrega leva (dias)</label>
+              <input id="scPrazo" inputmode="numeric" value="7">
+              <div class="dica">Do pedido até chegar na loja.</div></div>
+            <div class="campo m"><label>Agrupar por</label>
+              <select id="scAgrupar">
+                <option value="categoria">Fornecedor › Categoria › Produto</option>
+                <option value="marca">Fornecedor › Marca/modelo › Produto</option>
+              </select></div>
+            <div class="campo m"><label>Fornecedor</label>
+              <select id="scFornecedor"><option value="">Todos</option></select></div>
+            <div class="campo" style="padding-top:18px">
+              <label class="check"><input type="checkbox" id="scSoComprar"> Mostrar só o que precisa comprar</label></div>
+            <button class="btn primario" onclick="carregarSugestaoCompra()">🔍 Gerar</button>
+          </div>
+        </div>
+        <div id="relComprasSaida"></div>
+      </section>
+
+      <!-- ============ RELATÓRIO CLIENTES ============ -->
+      <section class="secao" id="sec-relClientes">
+        <div class="cabecalho-secao">
+          <div><h2>Vendas por Cliente</h2><div class="desc">Faturamento, ticket médio e participação</div></div>
+          <div class="acoes"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
+        </div>
+        <div class="card">
+          <div class="atalhos" style="margin-bottom:12px" id="atalhosRelCli"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>De</label><input type="date" id="relCDe"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="relCAte"></div>
+            <button class="btn primario" onclick="carregarRelClientes()">🔍 Gerar</button>
+          </div>
+        </div>
+        <div id="relClientesSaida"></div>
+      </section>
+
+      <!-- ============ CONFIG ============ -->
+      <!-- ============ NFC-e / CERTIFICADO ============ -->
+      <section class="secao" id="sec-fiscal">
+        <div class="cabecalho-secao">
+          <div><h2>NFC-e / Certificado digital</h2>
+            <div class="desc">Cupom fiscal eletrônico transmitido à SEFAZ-BA</div></div>
+          <div class="acoes">
+            <button class="btn" onclick="testarStatusSefaz()" id="btnTestarSefaz">📡 Testar SEFAZ</button>
+            <button class="btn primario" onclick="salvarFiscal()">💾 Salvar</button>
+          </div>
+        </div>
+
+        <div id="fiscalChecklist"></div>
+
+        <!-- [1.11] compras com nota x cartao x NFC-e emitidas -->
+        <div class="card" id="cardBalancoNotas">
+          <h3>📣 Notas do mês: compras × cartão × NFC-e emitidas
+            <span class="acoes">
+              <select id="balMes" onchange="carregarBalancoNotas()" style="font-size:12.5px;padding:5px 8px"></select>
+              <button class="btn pequeno" onclick="carregarBalancoNotas()">🔄</button>
+            </span>
+          </h3>
+          <div id="balancoNotas"><div class="vazio">Carregando…</div></div>
+
+          <details style="margin-top:12px">
+            <summary style="cursor:pointer;font-weight:600;color:var(--azul);font-size:13.5px">
+              ⚙️ Regra do aviso semanal (clique para ajustar)
+            </summary>
+            <div class="linha" style="margin-top:10px;align-items:flex-end">
+              <div class="campo m"><label>Aviso semanal</label>
+                <select id="cfg_aviso_notas_ativo">
+                  <option value="1">Ligado — aparece uma vez por semana</option>
+                  <option value="0">Desligado</option>
+                </select></div>
+              <div class="campo p"><label>Folga sobre o cartão (%)</label>
+                <input id="cfg_aviso_notas_margem" inputmode="decimal" placeholder="3">
+                <div class="dica">Mínimo = cartão + folga. 30 mil no cartão com 3% = 30,9 mil.</div></div>
+              <div class="campo m"><label>PIX conta como cartão?</label>
+                <select id="cfg_aviso_notas_incluir_pix">
+                  <option value="0">Não — só débito e crédito</option>
+                  <option value="1">Sim — soma o PIX no mínimo</option>
+                </select></div>
+              <div class="campo m"><label>Dia do aviso</label>
+                <select id="cfg_aviso_notas_dia">
+                  <option value="1">Segunda-feira</option><option value="2">Terça-feira</option>
+                  <option value="3">Quarta-feira</option><option value="4">Quinta-feira</option>
+                  <option value="5">Sexta-feira</option><option value="6">Sábado</option><option value="7">Domingo</option>
+                </select></div>
+              <button class="btn primario" onclick="salvarAvisoNotas()">💾 Salvar regra</button>
+            </div>
+            <div class="dica" style="margin-top:6px">Quem vê o aviso: usuários com acesso a esta tela (NFC-e / Certificado). O operador do caixa não vê.</div>
+          </details>
+        </div>
+
+        <!-- ---------- como transmitir ---------- -->
+        <div class="card">
+          <h3>🚚 Como transmitir a NFC-e
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+          <div class="linha">
+            <div class="campo" style="max-width:420px"><label>Caminho</label>
+              <select id="cfg_nfce_modo" onchange="aplicarModoNaTela()">
+                <option value="direto">Direto na SEFAZ (o sistema assina e transmite)</option>
+                <option value="focus">Pela Focus NFe (API — certificado e CSC ficam lá)</option>
+              </select>
+            </div>
+          </div>
+          <div id="modoExplicacao" class="dica"></div>
+        </div>
+
+        <!-- ---------- Focus NFe ---------- -->
+        <div class="card" id="cardFocus">
+          <h3>🟠 Focus NFe
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+          <div class="aviso info">
+            <span>ℹ️</span>
+            <div>No painel da Focus (<code>app.focusnfe.com.br</code>) a empresa precisa estar
+            cadastrada com o <strong>certificado A1</strong> e o <strong>CSC</strong> de cada
+            ambiente. Aqui entram só os <strong>tokens</strong> — um por ambiente — que a Focus
+            mostra em <em>Empresas → Tokens</em>. O sistema usa o token do ambiente escolhido
+            em <em>Dados fiscais → Ambiente</em>.</div>
+          </div>
+          <div class="grid g2">
+            <div class="card" style="margin:0;border:1px solid var(--cinza-linha)">
+              <h3 style="font-size:13.5px">🧪 Token de homologação</h3>
+              <div class="campo" style="margin:0"><label>Cole aqui</label>
+                <input type="password" id="cfg_focus_token_homologacao" autocomplete="off"
+                       placeholder="deixe em branco para não alterar">
+                <div class="dica" id="focusDicaHomologacao"></div>
+              </div>
+            </div>
+            <div class="card" style="margin:0;border:1px solid var(--cinza-linha)">
+              <h3 style="font-size:13.5px">🏭 Token de produção</h3>
+              <div class="campo" style="margin:0"><label>Cole aqui</label>
+                <input type="password" id="cfg_focus_token_producao" autocomplete="off"
+                       placeholder="deixe em branco para não alterar">
+                <div class="dica" id="focusDicaProducao"></div>
+              </div>
+            </div>
+          </div>
+          <div class="dica" style="margin-top:10px">
+            Pela Focus, quem numera as notas é a Focus — os campos <em>Série</em> e
+            <em>Próximo número</em> abaixo não são usados. O cupom continua saindo na sua
+            impressora, com o QR Code que a Focus devolve.
+          </div>
+        </div>
+
+        <!-- ---------- certificado ---------- -->
+        <div class="card" id="cardCertificado">
+          <div id="avisoModoFocusCert" class="aviso info" style="display:none"><span>🟠</span>
+            <div>No modo <strong>Focus NFe</strong> o certificado fica no painel da Focus.
+            O cadastro abaixo não é usado para transmitir.</div></div>
+          <h3>🔏 Certificado digital A1</h3>
+
+          <div id="certStatus"></div>
+
+          <div id="certForm" style="margin-top:12px">
+            <div class="linha" style="align-items:flex-end">
+              <div class="campo">
+                <label>Arquivo do certificado (.pfx ou .p12)</label>
+                <input type="file" id="certArquivo" accept=".pfx,.p12">
+              </div>
+              <div class="campo m">
+                <label>Senha do certificado</label>
+                <input type="password" id="certSenha" autocomplete="off"
+                       onkeydown="if(event.key==='Enter')enviarCertificado()">
+              </div>
+              <button class="btn primario" onclick="enviarCertificado()">🔏 Cadastrar certificado</button>
+            </div>
+            <div class="dica">
+              É o mesmo arquivo e a mesma senha que o contador usa para assinar. O sistema
+              confere se o CNPJ do certificado bate com o da loja antes de aceitar.
+            </div>
+          </div>
+
+          <div class="aviso alerta" style="margin-top:12px">
+            <span>🔒</span>
+            <div>Depois de cadastrado, o certificado passa a ficar <strong>dentro do arquivo
+            loja.db</strong>. Guarde o backup do banco com o mesmo cuidado que você guarda
+            o certificado — quem tem o arquivo pode assinar em nome da empresa.</div>
+          </div>
+        </div>
+
+        <!-- ---------- dados fiscais ---------- -->
+        <div class="card">
+          <h3>🏛️ Dados fiscais da loja
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+
+          <div class="linha">
+            <div class="campo m"><label>Inscrição estadual</label>
+              <input id="cfg_loja_ie2" placeholder="só números">
+              <div class="dica">Sem IE não há NFC-e.</div>
+            </div>
+            <div class="campo m"><label>Regime tributário</label>
+              <select id="cfg_nfce_crt">
+                <option value="1">Simples Nacional</option>
+                <option value="2">Simples Nacional — excesso de sublimite</option>
+                <option value="3">Regime Normal (Presumido / Real)</option>
+              </select>
+            </div>
+            <div class="campo m"><label>Código IBGE do município</label>
+              <input id="cfg_nfce_municipio_ibge" placeholder="2918803">
+              <div class="dica">2918803 = Laje/BA.</div>
+            </div>
+            <div class="campo m"><label>CNAE principal</label><input id="cfg_nfce_cnae" placeholder="4744099"></div>
+          </div>
+
+          <div class="linha">
+            <div class="campo m"><label>Ambiente</label>
+              <select id="cfg_nfce_ambiente" onchange="montarChecklist()">
+                <option value="2">Homologação (teste — não vale)</option>
+                <option value="1">Produção (vale de verdade)</option>
+              </select>
+            </div>
+            <div class="campo p"><label>Série</label><input id="cfg_nfce_serie" value="1"></div>
+            <div class="campo p"><label>Próximo número</label><input id="cfg_nfce_proximo_numero" value="1"></div>
+            <div class="campo m"><label>Emitir NFC-e</label>
+              <select id="cfg_nfce_ativo">
+                <option value="0">Desligado — só cupom interno</option>
+                <option value="1">Ligado</option>
+              </select>
+            </div>
+            <div class="campo m"><label>Ao fechar a venda</label>
+              <select id="cfg_nfce_emitir_automatico">
+                <option value="0">Perguntar — no cartão emite sem perguntar</option>
+                <option value="1">Emitir sozinho em toda venda</option>
+                <option value="2">Perguntar sempre, até no cartão</option>
+              </select>
+              <div class="dica">Cartão (débito/crédito) passa pela operadora, que informa a SEFAZ: por isso a nota é obrigatória. Dinheiro e PIX ficam a seu critério.</div>
+            </div>
+          </div>
+
+          <div class="aviso alerta">
+            <span>⚠️</span>
+            <div>Comece em <strong>homologação</strong>. Nota emitida em homologação não tem
+            valor nenhum e sai com o aviso obrigatório impresso — é assim que se testa sem
+            risco. Só mude para produção depois que uma venda de teste for autorizada.</div>
+          </div>
+        </div>
+
+        <!-- ---------- CSC ---------- -->
+        <div class="card" id="cardCsc">
+          <div id="avisoModoFocusCsc" class="aviso info" style="display:none"><span>🟠</span>
+            <div>No modo <strong>Focus NFe</strong> o CSC fica no painel da Focus. Os campos
+            abaixo não são usados para transmitir.</div></div>
+          <h3>🔑 CSC — Código de Segurança do Contribuinte
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+
+          <div class="aviso info">
+            <span>🔁</span>
+            <div>Homologação e produção têm <strong>CSC e ID diferentes</strong>. Cadastre os dois
+            aqui e o sistema usa o par certo conforme o <strong>Ambiente</strong> escolhido acima —
+            não precisa trocar nada na mão ao virar para produção. Digite o CSC
+            <strong>exatamente como o portal da SEFAZ mostra, com os hífens</strong> — eles fazem
+            parte do código.</div>
+          </div>
+
+          <div class="grid g2">
+            <div class="card" style="margin:0;border:1px solid var(--cinza-linha)">
+              <h3 style="font-size:13.5px">🧪 Homologação (teste)</h3>
+              <div class="linha" style="margin-bottom:0">
+                <div class="campo p"><label>ID do CSC</label>
+                  <input id="cfg_nfce_csc_id_homologacao" placeholder="nº (ex.: 1)" inputmode="numeric">
+                  <div class="dica" id="cscIdDicaHomologacao"></div></div>
+                <div class="campo"><label>CSC (código longo)</label>
+                  <input type="password" id="cfg_nfce_csc_homologacao" autocomplete="off"
+                         placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (com os hífens)">
+                  <div class="dica" id="cscDicaHomologacao"></div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="margin:0;border:1px solid var(--cinza-linha)">
+              <h3 style="font-size:13.5px">🏭 Produção (vale de verdade)</h3>
+              <div class="linha" style="margin-bottom:0">
+                <div class="campo p"><label>ID do CSC</label>
+                  <input id="cfg_nfce_csc_id_producao" placeholder="nº (ex.: 1)" inputmode="numeric">
+                  <div class="dica" id="cscIdDicaProducao"></div></div>
+                <div class="campo"><label>CSC (código longo)</label>
+                  <input type="password" id="cfg_nfce_csc_producao" autocomplete="off"
+                         placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (com os hífens)">
+                  <div class="dica" id="cscDicaProducao"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="linha" style="margin-top:12px">
+            <div class="campo" style="max-width:420px"><label>Versão do QR Code</label>
+              <select id="cfg_nfce_qrcode_versao">
+                <option value="2">Versão 2 (usa o CSC) — recomendada</option>
+                <option value="3">Versão 3 (sem CSC, NT 2025.001)</option>
+              </select>
+              <div class="dica">A versão 2 é a testada por todo mundo. A 3 dispensa o CSC no modo
+              normal, mas não funciona em contingência nesta versão do sistema.</div>
+            </div>
+          </div>
+
+          <details>
+            <summary style="cursor:pointer;font-weight:600;color:var(--azul);font-size:13.5px">
+              📖 Como gerar o CSC no portal da SEFAZ-BA (clique para abrir)
+            </summary>
+            <div style="font-size:13px;line-height:1.85;padding:12px 4px 4px">
+              <p><strong>1.</strong> Entre em <code>nfe.sefaz.ba.gov.br</code> → área do
+              contribuinte, com o <em>mesmo certificado digital</em> que você acabou de cadastrar aqui.</p>
+              <p><strong>2.</strong> Procure <em>NFC-e</em> → <em>Credenciamento</em>. A loja precisa
+              estar credenciada para emitir NFC-e antes de qualquer coisa — é um pedido à parte,
+              normalmente feito pelo contador.</p>
+              <p><strong>3.</strong> Depois de credenciada, vá em <em>CSC</em> (também chamado de
+              <em>Token NFC-e</em>) e gere um código. A tela mostra um <strong>ID</strong> (um número
+              curto, tipo 000001) e o <strong>CSC</strong> (um código longo). Copie os dois para cá.</p>
+              <p><strong>4.</strong> Gere um CSC para <em>homologação</em> e outro para
+              <em>produção</em> — são diferentes. Cadastre cada um na sua coluna aqui em cima;
+              o sistema escolhe sozinho conforme o ambiente ligado.</p>
+
+              <div class="aviso info" style="margin-top:10px"><span>ℹ️</span>
+                <div>O CSC é o que assina o QR Code do cupom, permitindo o cliente conferir a nota
+                pelo celular. Ele é secreto: o sistema guarda e nunca mostra de volta na tela.
+                A partir do QR Code versão 3 a SEFAZ passou a dispensá-lo, mas a versão 2
+                ainda é a usada pela maioria dos estados — confirme com seu contador qual
+                usar antes de ligar em produção.</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ---------- padroes fiscais dos produtos ---------- -->
+        <div class="card">
+          <h3>🏷️ Padrão fiscal dos produtos
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+          <p style="font-size:13px;color:var(--texto-fraco);margin-bottom:11px">
+            Usado quando o produto não tem o campo preenchido no cadastro. Confirme estes
+            valores com seu contador — é o que vai no imposto de cada item da nota.
+          </p>
+          <div class="linha" style="margin-bottom:0">
+            <div class="campo m"><label>NCM padrão</label><input id="cfg_nfce_ncm_padrao"></div>
+            <div class="campo p"><label>CFOP padrão</label><input id="cfg_nfce_cfop_padrao"></div>
+            <div class="campo m"><label>Origem padrão</label>
+              <select id="cfg_nfce_origem_padrao">
+                <option value="0">0 — Nacional</option>
+                <option value="1">1 — Estrangeira, importação direta</option>
+                <option value="2">2 — Estrangeira, mercado interno</option>
+                <option value="3">3 — Nacional, importação acima de 40%</option>
+                <option value="4">4 — Nacional, processos produtivos básicos</option>
+                <option value="5">5 — Nacional, importação até 40%</option>
+                <option value="6">6 — Estrangeira, importação direta sem similar</option>
+                <option value="7">7 — Estrangeira, mercado interno sem similar</option>
+                <option value="8">8 — Nacional, importação acima de 70%</option>
+              </select>
+            </div>
+            <div class="campo m"><label>CSOSN padrão (Simples)</label>
+              <select id="cfg_nfce_csosn_padrao">
+                <option value="102">102 — Sem permissão de crédito</option>
+                <option value="101">101 — Com permissão de crédito</option>
+                <option value="103">103 — Isenção do ICMS para faixa de receita</option>
+                <option value="300">300 — Imune</option>
+                <option value="400">400 — Não tributada</option>
+                <option value="500">500 — ICMS cobrado antes, por substituição</option>
+                <option value="900">900 — Outros</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- notas emitidas ---------- -->
+        <div class="card">
+          <h3>🧾 Notas emitidas
+            <span class="acoes"><button class="btn pequeno" onclick="carregarNotas()">🔄 Atualizar</button></span>
+          </h3>
+          <div class="tabela-wrap" id="notasLista"></div>
+        </div>
+
+        <!-- ---------- endereços dos webservices ---------- -->
+        <div class="card" id="cardEnderecos">
+          <div id="avisoModoFocusWs" class="aviso info" style="display:none"><span>🟠</span>
+            <div>No modo <strong>Focus NFe</strong> quem fala com a SEFAZ é a Focus. Estes
+            endereços não são usados.</div></div>
+          <h3>🌐 Endereços da SEFAZ
+            <span class="acoes"><button class="btn pequeno primario" onclick="salvarFiscal()">💾 Salvar</button></span>
+          </h3>
+          <div class="aviso info">
+            <span>ℹ️</span>
+            <div>Já vêm preenchidos com os endereços da Bahia. A SEFAZ muda esses endereços de
+            vez em quando — se der erro de conexão, confira no portal antes de mexer em
+            qualquer outra coisa.</div>
+          </div>
+          <details>
+            <summary style="cursor:pointer;font-weight:600;color:var(--azul);font-size:13.5px">
+              Mostrar os endereços
+            </summary>
+            <div style="padding-top:12px">
+              <div class="linha">
+                <div class="campo"><label>Autorização — produção</label><input id="cfg_nfce_ws_producao"></div>
+                <div class="campo"><label>Autorização — homologação</label><input id="cfg_nfce_ws_homologacao"></div>
+              </div>
+              <div class="linha">
+                <div class="campo"><label>Status do serviço — produção</label><input id="cfg_nfce_ws_status_producao"></div>
+                <div class="campo"><label>Status do serviço — homologação</label><input id="cfg_nfce_ws_status_homologacao"></div>
+              </div>
+              <div class="linha">
+                <div class="campo"><label>Eventos (cancelamento) — produção</label><input id="cfg_nfce_ws_evento_producao"></div>
+                <div class="campo"><label>Eventos (cancelamento) — homologação</label><input id="cfg_nfce_ws_evento_homologacao"></div>
+              </div>
+              <div class="linha">
+                <div class="campo"><label>Inutilização — produção</label><input id="cfg_nfce_ws_inutilizacao_producao"></div>
+                <div class="campo"><label>Inutilização — homologação</label><input id="cfg_nfce_ws_inutilizacao_homologacao"></div>
+              </div>
+              <div class="linha">
+                <div class="campo"><label>QR Code — produção</label><input id="cfg_nfce_url_qrcode_producao"></div>
+                <div class="campo"><label>QR Code — homologação</label><input id="cfg_nfce_url_qrcode_homologacao"></div>
+              </div>
+              <div class="linha" style="margin-bottom:0">
+                <div class="campo"><label>Consulta pela chave — produção</label><input id="cfg_nfce_url_consulta_producao"></div>
+                <div class="campo"><label>Consulta pela chave — homologação</label><input id="cfg_nfce_url_consulta_homologacao"></div>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <section class="secao" id="sec-config">
+        <div class="cabecalho-secao">
+          <div><h2>Configurações</h2><div class="desc">Dados da loja, cupom, usuários e backup</div></div>
+        </div>
+
+        <div class="card">
+          <h3>🏪 Dados da loja <span class="acoes"><button class="btn pequeno primario" onclick="salvarConfig()">💾 Salvar</button></span></h3>
+          <div class="linha">
+            <div class="campo g"><label>Razão social</label><input id="cfg_loja_nome"></div>
+            <div class="campo"><label>Nome fantasia</label><input id="cfg_loja_fantasia"></div>
+          </div>
+          <div class="linha">
+            <div class="campo m"><label>CNPJ</label><input id="cfg_loja_cnpj"></div>
+            <div class="campo m"><label>Inscrição estadual</label><input id="cfg_loja_ie"></div>
+            <div class="campo m"><label>Telefone</label><input id="cfg_loja_telefone"></div>
+          </div>
+          <div class="linha">
+            <div class="campo g"><label>Endereço</label><input id="cfg_loja_endereco"></div>
+            <div class="campo m"><label>Bairro</label><input id="cfg_loja_bairro"></div>
+          </div>
+          <div class="linha">
+            <div class="campo m"><label>Cidade</label><input id="cfg_loja_cidade"></div>
+            <div class="campo p"><label>UF</label><input id="cfg_loja_uf" maxlength="2"></div>
+            <div class="campo m"><label>CEP</label><input id="cfg_loja_cep"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🖨️ Impressora e cupom
+            <span class="acoes">
+              <button class="btn pequeno" onclick="imprimirTeste()">🧪 Imprimir teste</button>
+              <button class="btn pequeno primario" onclick="salvarConfig()">💾 Salvar</button>
+            </span>
+          </h3>
+
+          <div class="aviso alerta">
+            <span>⚠️</span>
+            <div>O cupom deste sistema é um <strong>comprovante interno, sem valor fiscal</strong>.
+            Ele não substitui a NF-e nem a NFC-e e sai impresso com essa advertência.</div>
+          </div>
+
+          <div class="linha">
+            <div class="campo m"><label>Modelo da impressora</label>
+              <select id="cfg_impressora_modelo" onchange="aplicarPerfilImpressora()">
+                <option>EPSON TM-T20</option>
+                <option>EPSON TM-T20X</option>
+                <option>EPSON TM-T88</option>
+                <option>BEMATECH MP-4200 TH</option>
+                <option>ELGIN i9 / i8</option>
+                <option>DARUMA DR800</option>
+                <option>OUTRA TERMICA 80MM</option>
+                <option>OUTRA TERMICA 58MM</option>
+                <option>IMPRESSORA COMUM (A4)</option>
+              </select>
+            </div>
+            <div class="campo"><label>Nome dela no Windows</label>
+              <input id="cfg_impressora_nome" placeholder="ex: EPSON TM-T20 Receipt">
+              <div class="dica">Copie exatamente como aparece em Painel de Controle → Dispositivos e Impressoras.</div>
+            </div>
+          </div>
+
+          <div class="linha">
+            <div class="campo m"><label>Largura da bobina</label>
+              <select id="cfg_cupom_largura"><option value="80">80 mm</option><option value="58">58 mm</option></select>
+            </div>
+            <div class="campo p"><label>Tamanho da fonte</label>
+              <select id="cfg_cupom_fonte">
+                <option value="9">9 (miúda)</option><option value="10">10</option>
+                <option value="11">11 (padrão)</option><option value="12">12</option>
+                <option value="13">13 (grande)</option><option value="14">14</option>
+              </select>
+            </div>
+            <div class="campo p"><label>Margem (mm)</label>
+              <select id="cfg_cupom_margem">
+                <option value="0">0</option><option value="2">2</option>
+                <option value="3">3</option><option value="5">5</option>
+              </select>
+            </div>
+            <div class="campo p"><label>Vias do cupom</label>
+              <select id="cfg_cupom_vias">
+                <option value="1">1 via</option><option value="2">2 vias</option><option value="3">3 vias</option>
+              </select>
+            </div>
+            <div class="campo p"><label>Linhas no fim</label>
+              <select id="cfg_cupom_linhas_fim">
+                <option value="0">0</option><option value="2">2</option><option value="4">4</option>
+                <option value="6">6</option><option value="8">8</option>
+              </select>
+              <div class="dica">Avanço antes do corte.</div>
+            </div>
+          </div>
+
+          <div class="linha">
+            <div class="campo m"><label>Ao finalizar a venda</label>
+              <select id="cfg_cupom_auto_imprimir">
+                <option value="1">Já abrir a impressão</option>
+                <option value="0">Só mostrar o cupom na tela</option>
+              </select>
+            </div>
+            <div class="campo"><label>Mensagem no topo do cupom</label>
+              <input id="cfg_cupom_cabecalho" placeholder="ex: ENTREGA GRATIS EM LAJE E REGIAO">
+            </div>
+            <div class="campo g"><label>Mensagem do rodapé</label><input id="cfg_cupom_rodape"></div>
+          </div>
+
+          <details style="margin-top:8px">
+            <summary style="cursor:pointer;font-weight:600;color:var(--azul);font-size:13.5px">
+              📖 Como configurar a Epson TM-T20 no Windows (clique para abrir)
+            </summary>
+            <div style="font-size:13px;line-height:1.85;padding:12px 4px 4px">
+              <p><strong>1. Instalar o driver</strong><br>
+              Baixe o <em>Epson Advanced Printer Driver (APD)</em> no site da Epson e instale
+              com a impressora ligada e conectada. Ela vai aparecer como
+              <code>EPSON TM-T20 Receipt</code>.</p>
+
+              <p><strong>2. Ajustar o papel</strong><br>
+              Dispositivos e Impressoras → clique com o botão direito na TM-T20 →
+              <em>Preferências de impressão</em> → tamanho do papel
+              <strong>80 x 297 mm</strong> (ou "Roll Paper 80mm").</p>
+
+              <p><strong>3. Corte automático do papel</strong><br>
+              Ainda em Preferências → aba <em>Document Settings</em> (ou "Configurações do
+              documento") → <em>Feed and Cut</em> / "Cortar papel" ao <strong>fim do documento</strong>.
+              É o driver que corta, não o sistema.</p>
+
+              <p><strong>4. Gaveta de dinheiro</strong> (se tiver)<br>
+              Na mesma tela, procure <em>Cash Drawer</em> / "Gaveta": marque para abrir
+              <strong>antes de imprimir</strong>. A gaveta liga no conector DK atrás da impressora
+              e é ela quem abre — o sistema não fala direto com a gaveta.</p>
+
+              <p><strong>5. Tirar a pergunta de impressão a cada venda</strong><br>
+              Deixe a TM-T20 como <strong>impressora padrão</strong> do Windows e crie um atalho
+              do navegador com a opção de impressão direta — o arquivo
+              <code>atalho-pdv.bat</code>, na pasta do sistema, já faz isso pronto.
+              Assim o cupom sai sozinho ao fechar a venda.</p>
+
+              <p><strong>6. Conferir</strong><br>
+              Clique em <strong>🧪 Imprimir teste</strong> aqui em cima. A régua tem que caber
+              numa linha só. Se ela quebrar, diminua a fonte ou confira a largura da bobina.</p>
+
+              <div class="aviso info" style="margin-top:10px"><span>ℹ️</span>
+                <div>A TM-T20 é uma <strong>impressora térmica não fiscal</strong> — é exatamente
+                o que este sistema precisa. Ela não é um ECF e não emite documento fiscal
+                sozinha; para cupom fiscal seria NFC-e transmitida à SEFAZ.</div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="card">
+          <h3>🛒 Regras de venda <span class="acoes"><button class="btn pequeno primario" onclick="salvarConfig()">💾 Salvar</button></span></h3>
+          <div class="linha" style="margin-bottom:0">
+            <div class="campo m"><label>Vender sem estoque</label>
+              <select id="cfg_venda_permite_estoque_negativo">
+                <option value="1">Permitir (estoque fica negativo)</option>
+                <option value="0">Bloquear a venda</option>
+              </select>
+            </div>
+            <div class="campo m"><label>Exigir caixa aberto</label>
+              <select id="cfg_venda_exige_caixa_aberto">
+                <option value="1">Sim, exigir</option>
+                <option value="0">Não exigir</option>
+              </select>
+            </div>
+            <div class="campo"><label>Entrega padrão ao fechar a venda</label>
+              <select id="cfg_venda_entrega_padrao">
+                <option value="depois">Expedição entrega depois — estoque baixa na entrega</option>
+                <option value="agora">Cliente leva na hora — estoque baixa na venda</option>
+              </select>
+              <div class="dica">O caixa pode trocar venda a venda. Pendentes ficam em Expedição / Entregas.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="cardPerfis">
+          <h3>🔑 Perfis de acesso
+            <span class="acoes"><button class="btn pequeno laranja" onclick="abrirPerfil()">➕ Novo perfil</button></span>
+          </h3>
+          <div class="aviso info">
+            <span>ℹ️</span>
+            <div>O perfil decide <strong>o que cada pessoa vê no menu</strong> e o que ela pode fazer.
+            O bloqueio vale também no servidor — não adianta saber o endereço da tela.</div>
+          </div>
+          <div class="tabela-wrap" id="perfisLista"></div>
+        </div>
+
+        <div class="card" id="cardUsuarios">
+          <h3>👤 Usuários <span class="acoes"><button class="btn pequeno laranja" onclick="abrirUsuario()">➕ Novo</button></span></h3>
+          <div class="tabela-wrap" id="usuariosLista"></div>
+        </div>
+
+        <div class="card">
+          <h3>🔐 Minha senha</h3>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+            <div class="campo m"><label>Senha atual</label><input type="password" id="senhaAtual"></div>
+            <div class="campo m"><label>Nova senha</label><input type="password" id="senhaNova"></div>
+            <button class="btn primario" onclick="trocarSenha()">Alterar senha</button>
+          </div>
+        </div>
+
+        <div class="card" id="cardBackup">
+          <h3>💾 Backup</h3>
+          <div id="backupInfo" style="font-size:13px;color:var(--texto-fraco);margin-bottom:11px"></div>
+          <p style="font-size:13px;color:var(--texto-fraco);margin-bottom:11px">
+            Baixe o arquivo do banco de dados e guarde em um lugar seguro. Faça isso pelo menos uma vez por semana.
+          </p>
+          <button class="btn verde" onclick="baixarBackup()">⬇️ Baixar backup agora</button>
+
+          <!-- [1.14] restaurar: leva o loja.db de um computador para o servidor (ou volta um backup) -->
+          <div style="border-top:1px solid var(--borda);margin-top:16px;padding-top:14px">
+            <h4 style="margin:0 0 6px">♻️ Restaurar um backup</h4>
+            <p style="font-size:12.5px;color:var(--texto-fraco);margin-bottom:10px">
+              Troca <strong>todos</strong> os dados do sistema pelos do arquivo escolhido (produtos, vendas, usuários,
+              certificado, CSC, numeração da NFC-e…). Use para levar o <code>loja.db</code> da loja para a internet
+              ou para voltar um backup. Uma cópia do banco atual fica guardada antes.
+            </p>
+            <div class="linha" style="align-items:flex-end;margin-bottom:0">
+              <div class="campo" style="flex:1;min-width:220px">
+                <label>Arquivo (loja.db ou backup-loja-….db)</label>
+                <input type="file" id="restArquivo" accept=".db,application/octet-stream" onchange="el('restPrevia').innerHTML='';el('btnRestaurar').style.display='none'">
+              </div>
+              <button class="btn" onclick="conferirRestauracao()">🔍 Conferir arquivo</button>
+              <button class="btn perigo" id="btnRestaurar" style="display:none" onclick="restaurarBackup()">♻️ Restaurar agora</button>
+            </div>
+            <div id="restPrevia" style="margin-top:10px"></div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<!-- ====================== MODAIS ====================== -->
+
+<!-- busca de produto (PDV) -->
+<div class="modal" id="modalBuscaProduto">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>🔍 Buscar produto</h3><button class="fechar" onclick="fecharModal('modalBuscaProduto')">×</button></div>
+    <div class="modal-corpo">
+      <div class="campo" style="margin-bottom:12px">
+        <input id="buscaProdTermo" placeholder="Digite parte do nome, código ou código de barras" autocomplete="off"
+               oninput="buscarProdutoModal()" onkeydown="navegarBusca(event)">
+      </div>
+      <div class="resultado-busca" id="buscaProdResultado"></div>
+    </div>
+  </div>
+</div>
+
+<!-- busca de cliente -->
+<div class="modal" id="modalBuscaCliente">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>👥 Escolher cliente</h3><button class="fechar" onclick="fecharModal('modalBuscaCliente')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo"><input id="buscaCliTermo" placeholder="Nome, CPF/CNPJ ou telefone" oninput="buscarClienteModal()" autocomplete="off"></div>
+        <button class="btn laranja" onclick="abrirCliente(null, true)">➕ Cadastrar</button>
+      </div>
+      <div class="resultado-busca" id="buscaCliResultado"></div>
+    </div>
+  </div>
+</div>
+
+<!-- pagamento -->
+<div class="modal" id="modalPagamento">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>💰 Pagamento</h3><button class="fechar" onclick="fecharModal('modalPagamento')">×</button></div>
+    <div class="modal-corpo">
+      <div class="resumo-pag">
+        <div class="l"><span>Subtotal</span><span id="pagSubtotal">R$ 0,00</span></div>
+        <div class="l"><span>Desconto</span><span id="pagDesconto">R$ 0,00</span></div>
+        <div class="l total"><span>TOTAL</span><span id="pagTotal">R$ 0,00</span></div>
+        <div class="l falta" id="pagFaltaLinha"><span>Falta</span><span id="pagFalta">R$ 0,00</span></div>
+        <div class="l troco" id="pagTrocoLinha" style="display:none"><span>TROCO</span><span id="pagTroco">R$ 0,00</span></div>
+      </div>
+
+      <div class="lista-pag" id="pagLista" style="display:none"></div>
+
+      <div class="linha">
+        <div class="campo"><label>Valor a lançar</label>
+          <input id="pagValor" inputmode="decimal" onkeydown="if(event.key==='Enter'){event.preventDefault();document.querySelector('#formasPag button').click();}">
+        </div>
+        <div class="campo p"><label>Parcelas</label><input id="pagParcelas" value="1" inputmode="numeric"></div>
+      </div>
+
+      <div class="formas-pag" id="formasPag">
+        <button onclick="addPagamento('DINHEIRO')"><span class="ic">💵</span> Dinheiro</button>
+        <button onclick="addPagamento('PIX')"><span class="ic">📱</span> PIX</button>
+        <button onclick="addPagamento('CARTAO DEBITO')"><span class="ic">💳</span> Débito</button>
+        <button onclick="addPagamento('CARTAO CREDITO')"><span class="ic">💳</span> Crédito</button>
+        <button onclick="addPagamento('CREDIARIO')"><span class="ic">📆</span> Crediário</button>
+        <button onclick="addPagamento('CHEQUE')"><span class="ic">🏦</span> Cheque</button>
+      </div>
+
+      <div id="pagCartao" style="display:none">
+        <div class="linha">
+          <div class="campo"><label>Maquininha</label><select id="pagOperadora" onchange="previewTaxaCartao()"></select></div>
+          <div class="campo m"><label>Bandeira (opcional)</label>
+            <select id="pagBandeira">
+              <option value=""></option><option>VISA</option><option>MASTERCARD</option>
+              <option>ELO</option><option>HIPERCARD</option><option>AMEX</option><option>OUTRA</option>
+            </select>
+          </div>
+        </div>
+        <div id="pagTaxaPreview"></div>
+      </div>
+
+      <!-- [1.13] a venda nao baixa o estoque: quem baixa e a entrega -->
+      <div class="linha" style="margin-top:12px;margin-bottom:0" id="pagEntregaLinha">
+        <div class="campo"><label>Entrega</label>
+          <select id="pagEntrega" onchange="aplicarEntregaNoPag()">
+            <option value="depois">🚚 Expedição entrega depois (estoque baixa na entrega)</option>
+            <option value="agora">🛍️ Cliente leva agora (baixa o estoque já)</option>
+          </select></div>
+        <div class="campo m" id="pagPrevisaoCampo"><label>Previsão de entrega</label><input type="date" id="pagPrevisao"></div>
+      </div>
+      <div class="campo" id="pagEnderecoCampo" style="margin-top:8px"><label>Endereço de entrega</label>
+        <input id="pagEndereco" placeholder="vem do cadastro do cliente; pode mudar aqui"></div>
+
+      <div id="pagCrediario" style="display:none">
+        <div class="aviso info"><span>📆</span><div>As parcelas do crediário vão para <strong>Contas a Receber</strong>.</div></div>
+        <div class="linha">
+          <div class="campo m"><label>1º vencimento</label><input type="date" id="pagPrimeiroVenc"></div>
+          <div class="campo p"><label>Intervalo (dias)</label><input id="pagIntervalo" value="30" inputmode="numeric"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalPagamento')">Voltar</button>
+      <button class="btn verde" id="btnConfirmarVenda" onclick="confirmarVenda()" style="padding:11px 22px;font-size:15px">✅ Confirmar venda</button>
+    </div>
+  </div>
+</div>
+
+<!-- produto -->
+<div class="modal" id="modalProduto">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="produtoTitulo">Produto</h3><button class="fechar" onclick="fecharModal('modalProduto')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="prod_id">
+      <div class="linha">
+        <div class="campo p"><label>Código</label><input id="prod_codigo" placeholder="auto"></div>
+        <div class="campo m"><label>Código de barras</label><input id="prod_codigo_barras" inputmode="numeric" placeholder="bipe aqui"></div>
+        <div class="campo g" style="flex:2"><label>Descrição *</label><input id="prod_descricao"></div>
+      </div>
+      <div class="linha">
+        <div class="campo"><label>Categoria</label><select id="prod_categoria_id"></select></div>
+        <div class="campo p"><label>Unidade</label>
+          <select id="prod_unidade">
+            <option>UN</option><option>SC</option><option>M</option><option>M2</option><option>M3</option>
+            <option>KG</option><option>LT</option><option>BR</option><option>PC</option><option>CX</option>
+            <option>RL</option><option>PAR</option><option>MIL</option>
+          </select>
+        </div>
+        <div class="campo m"><label>NCM</label>
+          <div style="display:flex;gap:6px"><input id="prod_ncm" inputmode="numeric" placeholder="8 dígitos" onblur="mostrarDescricaoNcm('prod_ncm','prodNcmDica')">
+            <button type="button" class="btn pequeno" onclick="abrirBuscaNcm('prod_ncm','prodNcmDica')" title="Procurar na tabela NCM">🔍</button></div>
+          <div class="dica" id="prodNcmDica"></div></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Preço de custo</label><input id="prod_preco_custo" inputmode="decimal" value="0" oninput="calcMargem()"></div>
+        <div class="campo p"><label>Margem %</label><input id="prod_margem" inputmode="decimal" placeholder="ex: 45" oninput="aplicarMargem()"></div>
+        <div class="campo m"><label>Preço de venda *</label><input id="prod_preco_venda" inputmode="decimal" value="0" oninput="calcMargem()"></div>
+        <div class="campo p"><label>Lucro</label><input id="prod_lucro" readonly></div>
+      </div>
+      <div class="linha">
+        <div class="campo p"><label>Estoque atual</label><input id="prod_estoque" inputmode="decimal" value="0"></div>
+        <div class="campo p"><label>Estoque mínimo</label><input id="prod_estoque_minimo" inputmode="decimal" value="0"></div>
+        <div class="campo m"><label>Localização</label><input id="prod_localizacao" placeholder="ex: Corredor 3"></div>
+        <div class="campo m"><label>Fornecedor</label><input id="prod_fornecedor"></div>
+        <div class="campo m"><label>Marca / modelo</label><input id="prod_marca" placeholder="ex: VOTORAN CP-II"></div>
+      </div>
+      <div class="linha">
+        <label class="check"><input type="checkbox" id="prod_fracionado"> Aceita quantidade fracionada (areia, m², kg…)</label>
+        <label class="check"><input type="checkbox" id="prod_ativo" checked> Produto ativo</label>
+      </div>
+
+      <details id="prodFiscal">
+        <summary style="cursor:pointer;font-weight:600;color:var(--azul);font-size:13.5px;margin:6px 0">
+          🏛️ Dados fiscais da NFC-e (clique para abrir)
+        </summary>
+        <div style="padding-top:10px">
+          <p style="font-size:12.5px;color:var(--texto-fraco);margin-bottom:10px">
+            Em branco, o produto usa o padrão da loja (Sistema → NFC-e). Preencha só
+            quando este produto tiver tributação diferente — cimento, por exemplo,
+            costuma ser substituição tributária (CSOSN 500).
+          </p>
+          <div class="linha">
+            <div class="campo m"><label>CEST</label><input id="prod_cest" inputmode="numeric" placeholder="opcional"></div>
+            <div class="campo p"><label>CFOP</label><input id="prod_cfop" inputmode="numeric" placeholder="5102"></div>
+            <div class="campo m"><label>Origem</label>
+              <select id="prod_origem">
+                <option value="">— padrão da loja —</option>
+                <option value="0">0 — Nacional</option>
+                <option value="1">1 — Estrangeira, importação direta</option>
+                <option value="2">2 — Estrangeira, mercado interno</option>
+                <option value="3">3 — Nacional, importação acima de 40%</option>
+                <option value="4">4 — Nacional, processos produtivos básicos</option>
+                <option value="5">5 — Nacional, importação até 40%</option>
+                <option value="6">6 — Estrangeira, importação direta sem similar</option>
+                <option value="7">7 — Estrangeira, mercado interno sem similar</option>
+                <option value="8">8 — Nacional, importação acima de 70%</option>
+              </select>
+            </div>
+            <div class="campo m"><label>CSOSN</label>
+              <select id="prod_csosn">
+                <option value="">— padrão da loja —</option>
+                <option value="102">102 — Sem permissão de crédito</option>
+                <option value="101">101 — Com permissão de crédito</option>
+                <option value="103">103 — Isenção por faixa de receita</option>
+                <option value="300">300 — Imune</option>
+                <option value="400">400 — Não tributada</option>
+                <option value="500">500 — ICMS já pago por substituição</option>
+                <option value="900">900 — Outros</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div id="prodAvisoEstoque"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalProduto')">Cancelar</button>
+      <button class="btn primario" onclick="salvarProduto()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- cliente -->
+<div class="modal" id="modalCliente">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="clienteTitulo">Cliente</h3><button class="fechar" onclick="fecharModal('modalCliente')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="cli_id">
+      <div class="linha">
+        <div class="campo g" style="flex:2"><label>Nome / Razão social *</label><input id="cli_nome"></div>
+        <div class="campo p"><label>Tipo</label>
+          <select id="cli_tipo"><option value="F">Pessoa Física</option><option value="J">Pessoa Jurídica</option></select>
+        </div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>CPF / CNPJ</label><input id="cli_cpf_cnpj" inputmode="numeric"></div>
+        <div class="campo m"><label>RG / Inscrição estadual</label><input id="cli_rg_ie"></div>
+        <div class="campo m"><label>Telefone / WhatsApp</label><input id="cli_telefone"></div>
+        <div class="campo"><label>E-mail</label><input id="cli_email" type="email"></div>
+      </div>
+      <div class="linha">
+        <div class="campo p"><label>CEP</label><input id="cli_cep" inputmode="numeric" onblur="buscarCep()"></div>
+        <div class="campo g" style="flex:2"><label>Logradouro</label><input id="cli_logradouro"></div>
+        <div class="campo p"><label>Número</label><input id="cli_numero"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Complemento</label><input id="cli_complemento"></div>
+        <div class="campo m"><label>Bairro</label><input id="cli_bairro"></div>
+        <div class="campo m"><label>Cidade</label><input id="cli_cidade"></div>
+        <div class="campo p"><label>UF</label><input id="cli_uf" maxlength="2"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Limite de crédito (R$)</label><input id="cli_limite_credito" inputmode="decimal" value="0"></div>
+        <div class="campo m"><label>Situação</label>
+          <select id="cli_status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select>
+        </div>
+        <div class="campo"><label>Observação</label><input id="cli_observacao"></div>
+      </div>
+      <div id="cliInfoCredito"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalCliente')">Cancelar</button>
+      <button class="btn primario" onclick="salvarCliente()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- movimento de estoque -->
+<div class="modal" id="modalEstoque">
+  <div class="modal-box">
+    <div class="modal-cab"><h3 id="estoqueTitulo">Movimento de estoque</h3><button class="fechar" onclick="fecharModal('modalEstoque')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="est_tipo">
+      <div class="campo" style="margin-bottom:12px">
+        <label>Produto *</label>
+        <input id="est_produto_busca" placeholder="Digite o nome ou bipe o código" oninput="buscarProdutoEstoque()" autocomplete="off">
+        <input type="hidden" id="est_produto_id">
+        <div class="resultado-busca" id="est_resultado" style="max-height:200px;border:1px solid var(--cinza-linha);border-radius:6px;margin-top:5px;display:none"></div>
+        <div class="dica" id="est_produto_sel"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label id="est_lbl_qtd">Quantidade *</label><input id="est_quantidade" inputmode="decimal"></div>
+        <div class="campo m"><label>Custo unitário</label><input id="est_custo" inputmode="decimal" value="0"></div>
+        <div class="campo m"><label>Documento / NF</label><input id="est_documento"></div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="est_observacao"></div>
+      <div id="est_aviso" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalEstoque')">Cancelar</button>
+      <button class="btn primario" onclick="salvarMovEstoque()">💾 Lançar</button>
+    </div>
+  </div>
+</div>
+
+<!-- caixa: abrir -->
+<div class="modal" id="modalCaixaAbrir">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>💵 Abrir caixa</h3><button class="fechar" onclick="fecharModal('modalCaixaAbrir')">×</button></div>
+    <div class="modal-corpo">
+      <div class="campo"><label>Fundo de troco (R$)</label><input id="cxFundo" inputmode="decimal" value="0" autofocus></div>
+      <div class="aviso info" style="margin-top:12px"><span>ℹ️</span><div>Informe quanto de dinheiro está entrando no caixa para dar troco.</div></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalCaixaAbrir')">Cancelar</button>
+      <button class="btn verde" onclick="abrirCaixa()">Abrir caixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- caixa: sangria/suprimento -->
+<div class="modal" id="modalCaixaMov">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3 id="cxMovTitulo">Movimento</h3><button class="fechar" onclick="fecharModal('modalCaixaMov')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="cxMovTipo">
+      <div class="campo" style="margin-bottom:12px"><label>Valor (R$)</label><input id="cxMovValor" inputmode="decimal"></div>
+      <div class="campo"><label>Motivo</label><input id="cxMovMotivo" placeholder="ex: retirada para o banco"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalCaixaMov')">Cancelar</button>
+      <button class="btn primario" onclick="salvarCaixaMov()">Lançar</button>
+    </div>
+  </div>
+</div>
+
+<!-- caixa: fechar -->
+<div class="modal" id="modalCaixaFechar">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>🔒 Fechar caixa</h3><button class="fechar" onclick="fecharModal('modalCaixaFechar')">×</button></div>
+    <div class="modal-corpo" id="cxFecharCorpo"></div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalCaixaFechar')">Cancelar</button>
+      <button class="btn perigo" onclick="fecharCaixa()">🔒 Confirmar fechamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- baixa de título -->
+<div class="modal" id="modalBaixa">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>✅ Receber parcela</h3><button class="fechar" onclick="fecharModal('modalBaixa')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="bxId">
+      <div id="bxInfo" style="margin-bottom:14px"></div>
+      <div class="linha">
+        <div class="campo"><label>Valor recebido</label><input id="bxValor" inputmode="decimal"></div>
+        <div class="campo m"><label>Forma</label>
+          <select id="bxForma">
+            <option>DINHEIRO</option><option>PIX</option><option>CARTAO DEBITO</option>
+            <option>CARTAO CREDITO</option><option>CHEQUE</option><option>TRANSFERENCIA</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="bxObs"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalBaixa')">Cancelar</button>
+      <button class="btn verde" onclick="salvarBaixa()">Confirmar recebimento</button>
+    </div>
+  </div>
+</div>
+
+<!-- detalhe da venda -->
+<div class="modal" id="modalVenda">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="vendaTitulo">Venda</h3><button class="fechar" onclick="fecharModal('modalVenda')">×</button></div>
+    <div class="modal-corpo" id="vendaCorpo"></div>
+    <div class="modal-acoes" id="vendaAcoes"></div>
+  </div>
+</div>
+
+<!-- categorias -->
+<div class="modal" id="modalCategorias">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>🗂️ Categorias</h3><button class="fechar" onclick="fecharModal('modalCategorias')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo"><input id="catNova" placeholder="Nova categoria" onkeydown="if(event.key==='Enter')salvarCategoria()"></div>
+        <button class="btn primario" onclick="salvarCategoria()">Adicionar</button>
+      </div>
+      <div class="tabela-wrap" id="catLista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- reajuste -->
+<div class="modal" id="modalReajuste">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>📈 Reajustar preços</h3><button class="fechar" onclick="fecharModal('modalReajuste')">×</button></div>
+    <div class="modal-corpo">
+      <div class="aviso alerta"><span>⚠️</span><div>O reajuste altera os preços na hora e <strong>não tem desfazer</strong>. Faça um backup antes.</div></div>
+      <div class="linha">
+        <div class="campo m"><label>Percentual (%)</label><input id="rjPercentual" inputmode="decimal" placeholder="ex: 5 ou -3"></div>
+        <div class="campo m"><label>Aplicar em</label>
+          <select id="rjCampo"><option value="venda">Preço de venda</option><option value="custo">Preço de custo</option></select>
+        </div>
+      </div>
+      <div class="campo"><label>Categoria</label><select id="rjCategoria"><option value="">Todas as categorias</option></select></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalReajuste')">Cancelar</button>
+      <button class="btn perigo" onclick="salvarReajuste()">Aplicar reajuste</button>
+    </div>
+  </div>
+</div>
+
+<!-- usuário -->
+<div class="modal" id="modalUsuario">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3 id="usuarioTitulo">Usuário</h3><button class="fechar" onclick="fecharModal('modalUsuario')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="usr_id">
+      <div class="linha">
+        <div class="campo m"><label>Login</label><input id="usr_usuario"></div>
+        <div class="campo"><label>Nome</label><input id="usr_nome"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Senha</label><input id="usr_senha" type="password" placeholder="deixe vazio p/ manter"></div>
+        <div class="campo m"><label>Perfil de acesso *</label>
+          <select id="usr_perfil_id" onchange="mostrarResumoPerfil()"></select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="usr_ativo" checked> Usuário ativo</label>
+      <div id="usr_resumo_perfil" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalUsuario')">Cancelar</button>
+      <button class="btn primario" onclick="salvarUsuario()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: cadastro -->
+<div class="modal" id="modalObraCad">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3 id="obraCadTitulo">Nova obra</h3><button class="fechar" onclick="fecharModal('modalObraCad')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="obra_id">
+      <div class="campo"><label>Nome da obra *</label><input id="obra_nome" placeholder="ex.: Prédio 10x30 Laje"></div>
+      <div class="linha">
+        <div class="campo"><label>Responsável</label><input id="obra_responsavel"></div>
+        <div class="campo m"><label>Telefone</label><input id="obra_telefone"></div>
+      </div>
+      <div class="campo"><label>Endereço</label><input id="obra_endereco"></div>
+      <div class="campo"><label>Situação</label>
+        <select id="obra_status"><option value="andamento">Em andamento</option><option value="concluida">Concluída</option></select>
+      </div>
+      <div class="campo"><label>Observação</label><textarea id="obra_observacao" rows="2"></textarea></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraCad')">Cancelar</button>
+      <button class="btn primario" onclick="salvarObra()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: detalhe (saldo, saídas, pagamentos) -->
+<div class="modal" id="modalObra">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="obraTitulo">Obra</h3><button class="fechar" onclick="fecharModal('modalObra')">×</button></div>
+    <div class="modal-corpo" id="obraCorpo"></div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObra')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: saída de material -->
+<div class="modal" id="modalObraSaida">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3>Saída de material pra obra</h3><button class="fechar" onclick="fecharModal('modalObraSaida')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo m"><label>Data</label><input type="date" id="saidaData"></div>
+        <div class="campo"><label>Observação</label><input id="saidaObs" placeholder="ex.: entregue na obra / retirado por..."></div>
+      </div>
+      <div class="campo" style="position:relative">
+        <label>Buscar material (nome ou código)</label>
+        <input id="saidaBusca" oninput="buscarProdutoSaida()" placeholder="digite para buscar...">
+        <div class="resultado-busca" id="saidaResultado" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5"></div>
+      </div>
+      <div class="aviso info" style="margin:4px 0 8px"><span>💡</span><div>O material sai pelo <strong>preço de custo</strong> (você pode ajustar o custo de cada item). O estoque baixa ao salvar.</div></div>
+      <div id="saidaItens"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraSaida')">Cancelar</button>
+      <button class="btn primario" onclick="salvarSaidaObra()">📦 Registrar saída</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: pagamento -->
+<div class="modal" id="modalObraPagto">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>Pagamento da obra</h3><button class="fechar" onclick="fecharModal('modalObraPagto')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo m"><label>Data</label><input type="date" id="pagtoData"></div>
+        <div class="campo m"><label>Valor</label><input id="pagtoValor" inputmode="decimal" placeholder="0,00"></div>
+      </div>
+      <div class="campo"><label>Forma</label>
+        <select id="pagtoForma">
+          <option>PIX</option><option>DINHEIRO</option><option>TRANSFERENCIA</option>
+          <option>CARTAO DEBITO</option><option>CARTAO CREDITO</option><option>CHEQUE</option>
+        </select>
+      </div>
+      <div class="campo"><label>Observação</label><input id="pagtoObs"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraPagto')">Cancelar</button>
+      <button class="btn primario" onclick="salvarPagtoObra()">💵 Registrar pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.14] senha de fabrica: troca obrigatoria (na internet) ou sugerida (em casa) -->
+<div class="modal" id="modalSenhaPadrao">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>🔐 Troque a senha</h3></div>
+    <div class="modal-corpo">
+      <div class="aviso alerta" id="senhaPadraoAviso"><span>⚠️</span>
+        <div>Você entrou com a <strong>senha de fábrica</strong>. Escolha uma senha sua antes de continuar.</div>
+      </div>
+      <div class="campo" style="margin-top:12px"><label>Nova senha (mínimo 6 caracteres)</label>
+        <input type="password" id="senhaPadraoNova" autocomplete="new-password"></div>
+      <div class="campo"><label>Repita a nova senha</label>
+        <input type="password" id="senhaPadraoRepete" autocomplete="new-password" onkeydown="if(event.key==='Enter')salvarSenhaPadrao()"></div>
+      <div id="senhaPadraoErro" class="aviso erro" style="display:none"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" id="senhaPadraoDepois" onclick="fecharModal('modalSenhaPadrao')">Agora não</button>
+      <button class="btn primario" onclick="salvarSenhaPadrao()">💾 Salvar nova senha</button>
+    </div>
+  </div>
+</div>
+
+<!-- perfil de acesso -->
+<div class="modal" id="modalPerfil">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="perfilTitulo">Perfil de acesso</h3><button class="fechar" onclick="fecharModal('modalPerfil')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="prf_id">
+      <div class="linha">
+        <div class="campo m"><label>Nome do perfil *</label><input id="prf_nome" placeholder="ex: Balconista"></div>
+        <div class="campo"><label>Para que serve</label><input id="prf_descricao" placeholder="ex: vende e consulta estoque"></div>
+      </div>
+
+      <label class="check" style="margin:6px 0 14px">
+        <input type="checkbox" id="prf_todos" onchange="alternarTudoPerfil()">
+        <strong>Acesso total ao sistema</strong> (marca tudo e ignora a lista abaixo)
+      </label>
+
+      <div id="prf_marcadores" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn pequeno" onclick="marcarPerfil(true)">Marcar tudo</button>
+        <button class="btn pequeno" onclick="marcarPerfil(false)">Desmarcar tudo</button>
+      </div>
+
+      <div id="prf_permissoes"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalPerfil')">Cancelar</button>
+      <button class="btn primario" onclick="salvarPerfil()">💾 Salvar perfil</button>
+    </div>
+  </div>
+</div>
+
+<!-- orçamento -->
+<div class="modal" id="modalOrcamento">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="orcTitulo">Novo orçamento</h3><button class="fechar" onclick="fecharModal('modalOrcamento')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="orc_id">
+
+      <div class="linha">
+        <div class="campo g" style="flex:2">
+          <label>Cliente</label>
+          <input id="orc_cliente_busca" placeholder="Nome do cliente (ou deixe em branco)" autocomplete="off" oninput="buscarClienteOrcamento()">
+          <input type="hidden" id="orc_cliente_id">
+          <div class="resultado-busca" id="orc_cli_resultado" style="max-height:180px;border:1px solid var(--cinza-linha);border-radius:6px;margin-top:5px;display:none"></div>
+        </div>
+        <div class="campo m"><label>Telefone</label><input id="orc_cliente_telefone"></div>
+        <div class="campo p"><label>Validade (dias)</label><input id="orc_validade_dias" value="15" inputmode="numeric"></div>
+      </div>
+
+      <div class="pdv-busca" style="padding:11px;margin-bottom:10px">
+        <div class="campo p"><label>Qtd.</label>
+          <input id="orc_qtd" value="1" style="padding:9px" onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('orc_codigo').focus();}">
+        </div>
+        <div class="campo g" style="flex:1"><label>Produto</label>
+          <input id="orc_codigo" placeholder="Bipe o código ou digite o nome e tecle Enter" autocomplete="off"
+                 style="padding:9px;font-size:15px" onkeydown="if(event.key==='Enter'){event.preventDefault();orcBuscarProduto();}">
+        </div>
+        <button class="btn laranja" style="padding:10px 16px" onclick="orcBuscarProduto()">🔍 Adicionar</button>
+      </div>
+
+      <div class="tabela-wrap" style="margin-bottom:12px">
+        <table><thead><tr>
+          <th style="width:34px">#</th><th>Produto</th>
+          <th class="num" style="width:88px">Qtd.</th><th class="num" style="width:96px">V. Unit.</th>
+          <th class="num" style="width:100px">Total</th><th style="width:44px"></th>
+        </tr></thead><tbody id="orc_itens"></tbody></table>
+      </div>
+
+      <div class="linha">
+        <div class="campo m"><label>Desconto (R$)</label><input id="orc_desconto" inputmode="decimal" value="0" oninput="orcTotais()"></div>
+        <div class="campo m"><label>Condição de pagamento</label>
+          <input id="orc_condicao" list="listaCondicoes" placeholder="ex: 30/60/90">
+          <datalist id="listaCondicoes">
+            <option>À vista</option><option>PIX</option><option>Cartão em até 6x</option>
+            <option>30 dias</option><option>30/60</option><option>30/60/90</option>
+            <option>Entrada + 2x</option>
+          </datalist>
+        </div>
+        <div class="campo m"><label>Prazo de entrega</label><input id="orc_entrega" placeholder="ex: 3 dias úteis"></div>
+        <div class="campo m"><label>Vendedor</label><input id="orc_vendedor"></div>
+      </div>
+
+      <div class="campo"><label>Observações (saem impressas)</label><input id="orc_observacao"></div>
+
+      <div class="resumo-pag" style="margin-top:14px">
+        <div class="l"><span>Subtotal</span><span id="orc_subtotal">R$ 0,00</span></div>
+        <div class="l"><span>Desconto</span><span id="orc_desc_lbl">R$ 0,00</span></div>
+        <div class="l total"><span>TOTAL DO ORÇAMENTO</span><span id="orc_total">R$ 0,00</span></div>
+      </div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalOrcamento')">Cancelar</button>
+      <button class="btn primario" onclick="salvarOrcamento(false)">💾 Salvar</button>
+      <button class="btn verde" onclick="salvarOrcamento(true)">🖨️ Salvar e imprimir</button>
+    </div>
+  </div>
+</div>
+
+<!-- importacao de planilha -->
+<div class="modal" id="modalImportar">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="impTitulo">Importar planilha</h3><button class="fechar" onclick="fecharModal('modalImportar')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="imp_tipo">
+
+      <div class="aviso info">
+        <span>📄</span>
+        <div>Aceita <strong>.xlsx</strong>, <strong>.xls</strong> e <strong>.csv</strong>.
+        A primeira linha tem que ser o cabeçalho com o nome das colunas — o sistema
+        reconhece os nomes mais comuns sozinho.
+        <button class="btn pequeno" style="margin-left:8px" onclick="baixarModelo()">⬇️ Baixar modelo</button></div>
+      </div>
+
+      <div class="linha">
+        <div class="campo g">
+          <label>Arquivo</label>
+          <input type="file" id="imp_arquivo" accept=".xlsx,.xls,.csv,.txt" onchange="analisarImportacao()">
+        </div>
+      </div>
+
+      <label class="check" id="imp_linha_novos" style="display:none">
+        <input type="checkbox" id="imp_somente_novos">
+        Importar <strong>só o que ainda não existe</strong> (não mexe em quem já está cadastrado)
+      </label>
+
+      <div id="imp_preview" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalImportar')">Cancelar</button>
+      <button class="btn primario" id="imp_btn" onclick="confirmarImportacao()" disabled>📥 Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- maquininha -->
+<div class="modal" id="modalOperadora">
+  <div class="modal-box">
+    <div class="modal-cab"><h3 id="operadoraTitulo">Maquininha</h3><button class="fechar" onclick="fecharModal('modalOperadora')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="op_id">
+      <div class="linha">
+        <div class="campo g" style="flex:2"><label>Nome da operadora *</label>
+          <input id="op_nome" list="listaOperadoras" placeholder="ex: CIELO, STONE, PAGSEGURO">
+          <datalist id="listaOperadoras">
+            <option>CIELO</option><option>REDE</option><option>STONE</option>
+            <option>PAGSEGURO</option><option>GETNET</option><option>MERCADO PAGO</option>
+            <option>SAFRAPAY</option><option>SUMUP</option><option>TON</option><option>INFINITEPAY</option>
+          </datalist>
+        </div>
+        <div class="campo m"><label>Apelido</label><input id="op_apelido" placeholder="ex: maquininha do balcão"></div>
+      </div>
+
+      <h3 style="font-size:13px;color:var(--azul);margin:14px 0 8px">Taxas cobradas (%)</h3>
+      <div class="linha">
+        <div class="campo p"><label>Débito</label><input id="op_taxa_debito" inputmode="decimal" value="1,99"></div>
+        <div class="campo p"><label>Crédito à vista</label><input id="op_taxa_credito" inputmode="decimal" value="3,49"></div>
+        <div class="campo p"><label>Crédito parcelado</label><input id="op_taxa_parcelado" inputmode="decimal" value="4,99"></div>
+        <div class="campo"><div class="dica" style="margin-top:22px">
+          Use a taxa do seu extrato. Se o parcelado ficar em 0, o sistema usa a do crédito à vista.
+        </div></div>
+      </div>
+
+      <h3 style="font-size:13px;color:var(--azul);margin:14px 0 8px">Prazo do depósito (dias)</h3>
+      <div class="linha">
+        <div class="campo p"><label>Débito</label><input id="op_prazo_debito" inputmode="numeric" value="1"></div>
+        <div class="campo p"><label>Crédito (1ª parcela)</label><input id="op_prazo_credito" inputmode="numeric" value="30"></div>
+        <div class="campo p"><label>Entre parcelas</label><input id="op_prazo_parcela" inputmode="numeric" value="30"></div>
+        <div class="campo"><div class="dica" style="margin-top:22px">
+          Ex.: crédito em 3x com 30/30 cai em 30, 60 e 90 dias.
+        </div></div>
+      </div>
+
+      <div class="linha">
+        <label class="check"><input type="checkbox" id="op_padrao"> Usar esta como padrão nas vendas no cartão</label>
+        <div class="campo m"><label>Situação</label>
+          <select id="op_status"><option value="ativo">Ativa</option><option value="inativo">Inativa</option></select>
+        </div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="op_observacao"></div>
+      <div id="op_simulacao" style="margin-top:12px"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalOperadora')">Cancelar</button>
+      <button class="btn primario" onclick="salvarOperadora()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- baixa de recebível de cartão -->
+<div class="modal" id="modalReceberCartao">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>💳 Confirmar depósito</h3><button class="fechar" onclick="fecharModal('modalReceberCartao')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="rcId">
+      <div id="rcInfo" style="margin-bottom:14px"></div>
+      <div class="linha">
+        <div class="campo"><label>Valor depositado</label><input id="rcValor" inputmode="decimal"></div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="rcObs" placeholder="ex: conferido no extrato do Itaú"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalReceberCartao')">Cancelar</button>
+      <button class="btn verde" onclick="salvarReceberCartao()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- conta a pagar -->
+<div class="modal" id="modalConta">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="contaTitulo">Lançar conta a pagar</h3><button class="fechar" onclick="fecharModal('modalConta')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="cp_id">
+      <div class="linha">
+        <div class="campo g" style="flex:2">
+          <label>Fornecedor</label>
+          <input id="cp_fornecedor_busca" placeholder="Digite o nome do fornecedor" autocomplete="off" oninput="buscarFornecedorConta()">
+          <input type="hidden" id="cp_fornecedor_id">
+          <div class="resultado-busca" id="cp_forn_resultado" style="max-height:190px;border:1px solid var(--cinza-linha);border-radius:6px;margin-top:5px;display:none"></div>
+          <div class="dica" id="cp_forn_sel"></div>
+        </div>
+        <div class="campo"><label>Categoria da despesa</label><select id="cp_categoria_id"></select></div>
+      </div>
+      <div class="linha">
+        <div class="campo g" style="flex:2"><label>Descrição</label><input id="cp_descricao" placeholder="ex: Energia de agosto, NF 4521 de cimento"></div>
+        <div class="campo m"><label>Documento / NF</label><input id="cp_documento"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Valor total (R$) *</label><input id="cp_valor" inputmode="decimal" oninput="previewParcelas()"></div>
+        <div class="campo m"><label>Emissão</label><input type="date" id="cp_emissao"></div>
+        <div class="campo m"><label>1º vencimento *</label><input type="date" id="cp_vencimento" onchange="previewParcelas()"></div>
+      </div>
+      <div class="linha" id="cp_linha_parcelas">
+        <div class="campo p"><label>Parcelas</label><input id="cp_parcelas" value="1" inputmode="numeric" oninput="previewParcelas()"></div>
+        <div class="campo p"><label>Intervalo (dias)</label><input id="cp_intervalo" value="30" inputmode="numeric" oninput="previewParcelas()"></div>
+        <div class="campo"><label>Observação</label><input id="cp_observacao"></div>
+      </div>
+      <div id="cp_preview"></div>
+
+      <!-- [1.16] como pagar: boleto (anexa o arquivo) ou PIX (guarda os dados) -->
+      <div style="border-top:1px solid var(--cinza-linha);margin-top:12px;padding-top:12px">
+        <div class="linha" style="margin-bottom:0">
+          <div class="campo m"><label>Como vai pagar</label>
+            <select id="cp_forma_prevista" onchange="aplicarFormaPrevista()">
+              <option value="">— não definir —</option>
+              <option value="BOLETO">Boleto</option>
+              <option value="PIX">PIX</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+          <div class="campo" id="cp_boleto_box" style="display:none">
+            <label>Boleto (PDF ou foto)</label>
+            <input type="file" id="cp_boleto_arq" accept="application/pdf,image/*">
+            <div id="cp_boleto_atual" style="font-size:12px;color:var(--texto-fraco);margin-top:4px"></div>
+          </div>
+          <div class="campo" id="cp_pix_box" style="display:none">
+            <label>Dados do PIX (chave ou copia-e-cola)</label>
+            <input id="cp_pix_dados" placeholder="ex.: chave CNPJ 00.000.000/0001-00">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalConta')">Cancelar</button>
+      <button class="btn primario" onclick="salvarConta()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- pagamento de conta -->
+<div class="modal" id="modalPagarConta">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>💸 Pagar conta</h3><button class="fechar" onclick="fecharModal('modalPagarConta')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="pgId">
+      <div id="pgInfo" style="margin-bottom:14px"></div>
+      <div class="linha">
+        <div class="campo p"><label>Juros / multa</label><input id="pgJuros" inputmode="decimal" value="0" oninput="recalcPagarConta()"></div>
+        <div class="campo p"><label>Desconto</label><input id="pgDesconto" inputmode="decimal" value="0" oninput="recalcPagarConta()"></div>
+        <div class="campo m"><label>Valor a pagar</label><input id="pgValor" inputmode="decimal"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Forma</label>
+          <select id="pgForma" onchange="mostrarSairCaixa()">
+            <option>DINHEIRO</option><option>PIX</option><option>TRANSFERENCIA</option>
+            <option>CARTAO DEBITO</option><option>CARTAO CREDITO</option><option>CHEQUE</option>
+          </select>
+        </div>
+        <div class="campo"><label>Observação</label><input id="pgObs"></div>
+      </div>
+      <div id="pgSairCaixa" style="display:none">
+        <label class="check"><input type="checkbox" id="pgSaiCaixa" checked> Tirar o dinheiro do caixa (lança uma sangria)</label>
+      </div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalPagarConta')">Cancelar</button>
+      <button class="btn verde" onclick="salvarPagarConta()">Confirmar pagamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- fornecedor -->
+<div class="modal" id="modalFornecedor">
+  <div class="modal-box">
+    <div class="modal-cab"><h3 id="fornecedorTitulo">Fornecedor</h3><button class="fechar" onclick="fecharModal('modalFornecedor')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="forn_id">
+      <div class="linha">
+        <div class="campo g" style="flex:2"><label>Nome / Razão social *</label><input id="forn_nome"></div>
+        <div class="campo m"><label>CNPJ</label><input id="forn_cnpj" inputmode="numeric"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Telefone</label><input id="forn_telefone"></div>
+        <div class="campo"><label>E-mail</label><input id="forn_email" type="email"></div>
+        <div class="campo m"><label>Contato (vendedor)</label><input id="forn_contato"></div>
+      </div>
+      <div class="linha">
+        <div class="campo m"><label>Cidade</label><input id="forn_cidade"></div>
+        <div class="campo p"><label>UF</label><input id="forn_uf" maxlength="2"></div>
+        <div class="campo m"><label>Situação</label>
+          <select id="forn_status"><option value="ativo">Ativo</option><option value="inativo">Inativo</option></select>
+        </div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="forn_observacao"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalFornecedor')">Cancelar</button>
+      <button class="btn primario" onclick="salvarFornecedor()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- categorias de despesa -->
+<div class="modal" id="modalCategoriasCp">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>🗂️ Categorias de despesa</h3><button class="fechar" onclick="fecharModal('modalCategoriasCp')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo"><input id="catCpNova" placeholder="Nova categoria" onkeydown="if(event.key==='Enter')salvarCategoriaCp()"></div>
+        <button class="btn primario" onclick="salvarCategoriaCp()">Adicionar</button>
+      </div>
+      <div class="tabela-wrap" id="catCpLista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- [1.13] confirmar entrega -->
+<div class="modal" id="modalEntrega">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="entregaTitulo">🚚 Confirmar entrega</h3><button class="fechar" onclick="fecharModal('modalEntrega')">×</button></div>
+    <div class="modal-corpo">
+      <div id="entregaCabecalho" style="font-size:13px;margin-bottom:10px"></div>
+      <div class="tabela-wrap" id="entregaItens"></div>
+      <div class="linha" style="margin-top:12px">
+        <div class="campo"><label>Quem recebeu</label><input id="entregaRecebidoPor" placeholder="nome de quem assinou / recebeu"></div>
+        <div class="campo"><label>Observação</label><input id="entregaObs" placeholder="ex: faltou 2 sacos, volta amanhã"></div>
+      </div>
+      <div class="aviso info"><span>📦</span><div>Ao confirmar, <strong>o estoque baixa</strong> na quantidade informada. Entregou só uma parte?
+        Ajuste as quantidades: o resto fica pendente para a próxima viagem.</div></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalEntrega')">Voltar</button>
+      <button class="btn" onclick="entregaTudo()">Marcar tudo que falta</button>
+      <button class="btn verde" id="btnConfirmarEntrega" onclick="confirmarEntregaModal()" style="padding:11px 22px;font-size:15px">✅ Confirmar entrega</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.13] dados da entrega -->
+<div class="modal" id="modalEntregaDados">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>📍 Dados da entrega</h3><button class="fechar" onclick="fecharModal('modalEntregaDados')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="entDados_id">
+      <div class="campo"><label>Endereço de entrega</label><input id="entDados_endereco" placeholder="rua, nº, bairro, cidade"></div>
+      <div class="linha">
+        <div class="campo m"><label>Telefone</label><input id="entDados_telefone"></div>
+        <div class="campo m"><label>Previsão de entrega</label><input type="date" id="entDados_previsao"></div>
+      </div>
+      <div class="campo"><label>Observação</label><input id="entDados_obs"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalEntregaDados')">Cancelar</button>
+      <button class="btn primario" onclick="salvarDadosEntrega()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.12] busca na tabela NCM -->
+<div class="modal" id="modalBuscaNcm">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>🏷️ Procurar NCM</h3><button class="fechar" onclick="fecharModal('modalBuscaNcm')">×</button></div>
+    <div class="modal-corpo">
+      <div class="campo"><label>Palavras da descrição ou começo do código</label>
+        <input id="ncmBuscaTexto" placeholder="ex.: cimento portland · tinta acrilica · 3917" oninput="buscarNcmDigitando()" autocomplete="off">
+        <div class="dica">Todas as palavras precisam aparecer. Os códigos vêm da tabela oficial (10.440 códigos).</div></div>
+      <div class="tabela-wrap" id="ncmBuscaLista" style="max-height:380px;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
+<!-- [1.11] aviso semanal: compras com nota x cartao x NFC-e emitidas -->
+<div class="modal" id="modalAvisoNotas">
+  <div class="modal-box" style="max-width:700px">
+    <div class="modal-cab"><h3>📣 Notas fiscais desta semana</h3><button class="fechar" onclick="fecharAvisoNotas()">×</button></div>
+    <div class="modal-corpo" id="avisoNotasCorpo"></div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharAvisoNotas(); irPara('fiscal')">Ver na tela de NFC-e</button>
+      <button class="btn primario" onclick="fecharAvisoNotas()">Entendi — até semana que vem</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/pdv.js"></script>
+<script src="js/cadastros.js"></script>
+<script src="js/operacao.js"></script>
+<script src="js/relatorios.js"></script>
+<script src="js/financeiro.js"></script>
+<script src="js/cartao.js"></script>
+<script src="js/perfis.js"></script>
+<script src="js/entrada.js"></script>
+<script src="js/orcamento.js"></script>
+<script src="js/fiscal.js"></script>
+<script src="js/ncm.js"></script>
+<script src="js/expedicao.js"></script>
+<script src="js/obras.js"></script>
+</body>
+</html>
