@@ -1,0 +1,59 @@
+=====================================================================
+  ATUALIZACAO 1.14 -> 1.15  (Contas a Pagar e uso no celular)
+=====================================================================
+
+O QUE MUDA
+
+  - CELULAR: TABELA VIRA CARTAO. No celular, as listas (Contas a Pagar,
+    Vendas, Produtos, Clientes, etc.) deixam de ser uma tabela larga que
+    some pro lado. Cada linha vira um cartao, com o nome do campo ao lado
+    do valor (Fornecedor, Valor, Vencimento, Situacao...). Nada mais corta
+    na tela. No computador continua a tabela normal de sempre.
+
+  - CONTAS A PAGAR: ORDENAR PELA COLUNA. No computador, clique no titulo de
+    qualquer coluna (Vencimento, Fornecedor, Valor, Saldo...) para ordenar.
+    Clique de novo para inverter (crescente/decrescente). A coluna ordenada
+    fica marcada com uma seta.
+
+  - CONTAS A PAGAR: AGRUPAR POR FORNECEDOR. Botao "Agrupar por fornecedor"
+    (em cima da tabela). Junta as contas de cada fornecedor, com o total e
+    o quanto esta em aberto com ele. Clicar na faixa do fornecedor recolhe/
+    abre o grupo. Os fornecedores aparecem do que tem mais em aberto para o
+    que tem menos (ou em A-Z, se voce ordenar por Fornecedor).
+
+  - ATALHO "ESTE MES" CORRIGIDO. Antes, "Este mes" puxava do dia 1 so ate
+    HOJE. Agora vai do dia 1 ao ULTIMO dia do mes — assim as contas que
+    ainda vao vencer neste mes tambem aparecem. "Este ano" vai ate 31/dez
+    pela mesma logica. Vale em todas as telas que tem esses botoes de
+    periodo (Contas a Pagar, Relatorios, Orcamentos, Cartao).
+
+  - O numero da versao no topo agora e curto (ex.: v1.15), para caber na
+    barra no celular. A descricao completa aparece ao passar o mouse.
+
+ATENCAO - JANEIRO DE 2027
+  A reforma tributaria (IBS/CBS) passa a ser exigida na NFC-e do Simples
+  Nacional em 04/01/2027. O sistema vai precisar de atualizacao antes disso.
+
+-------------------------------------------------------------------------
+COMO ATUALIZAR
+-------------------------------------------------------------------------
+
+  >> SE O SISTEMA JA ESTA NA INTERNET (Railway):
+     1. Suba os arquivos novos no GitHub (Add file -> Upload files),
+        por cima dos antigos, SEM a pasta node_modules e SEM o loja.db,
+        e clique em Commit changes.
+     2. O Railway reconstroi sozinho. Os dados NAO se perdem (ficam no
+        volume /data).
+     3. No navegador, a tela nova aparece sozinha (nao precisa de
+        Ctrl+Shift+R). No celular, abra o endereco e veja as listas em
+        cartao.
+
+  >> SE O SISTEMA RODA NO COMPUTADOR DA LOJA:
+     1. Feche o sistema (janela preta do iniciar.bat).
+     2. Copie os arquivos deste zip por cima da pasta, substituindo.
+        NAO apague node_modules nem loja.db.
+     3. Abra pelo iniciar.bat. No topo tem que aparecer v1.15.
+
+SE DER ERRADO
+  Volte os arquivos antigos. O banco (loja.db) nao e tocado.
+=====================================================================

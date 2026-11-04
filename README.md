@@ -118,6 +118,21 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 📱 Contas a Pagar e celular (1.15)
+
+- **No celular, as tabelas viram cartões**: cada linha vira um cartãozinho com
+  o nome do campo ao lado do valor (Fornecedor, Valor, Vencimento…). Nada mais
+  corta na tela. No computador continua a tabela normal. Vale para todas as
+  listas (Contas a Pagar, Vendas, Produtos, Clientes…)
+- **Contas a Pagar — ordenar pela coluna**: no computador, clique no título de
+  qualquer coluna para ordenar; clique de novo para inverter
+- **Contas a Pagar — agrupar por fornecedor**: botão que junta as contas de
+  cada fornecedor, com total e quanto está em aberto com ele; clicar na faixa
+  recolhe/abre o grupo
+- **Atalho "Este mês" corrigido**: vai do dia 1 ao **último dia do mês** (antes
+  parava em hoje), então as contas a vencer ainda neste mês aparecem; "Este ano"
+  vai até 31/dez. Vale em todas as telas com os botões de período
+
 ### ☁️ Na internet / Backup e restauração (1.14)
 
 - **Pode rodar na internet (Railway)** além do computador da loja — os dois

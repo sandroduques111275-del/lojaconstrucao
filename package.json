@@ -1,6 +1,6 @@
 {
   "name": "loja-construcao",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "Sistema de controle de vendas e emissao de cupom para loja de material de construcao",
   "main": "server.js",
   "scripts": {

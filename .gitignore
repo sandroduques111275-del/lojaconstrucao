@@ -1,0 +1,10 @@
+# o que NAO vai para o GitHub / Railway
+node_modules/
+loja.db
+loja.db.tmp
+backups/
+*.db
+*.log
+.DS_Store
+Thumbs.db
+endereco.txt

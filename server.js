@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.14 - Na internet (Railway): volume, senha e restauracao';
+const VERSAO = '1.15 - Contas a Pagar: ordenar e agrupar por fornecedor';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
