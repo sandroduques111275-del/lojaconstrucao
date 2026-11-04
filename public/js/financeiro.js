@@ -130,9 +130,12 @@ function cpLinha(c) {
     <td class="centro">${c.status === 'vencido' ? c.dias + ' d' : '—'}</td>
     <td><strong>${esc(c.fornecedor || '—')}</strong></td>
     <td>${esc(c.descricao || '—')}
-      ${c.total_parcelas > 1 ? `<span class="pill cinza">${c.parcela}/${c.total_parcelas}</span>` : ''}</td>
+      ${c.total_parcelas > 1 ? `<span class="pill cinza">${c.parcela}/${c.total_parcelas}</span>` : ''}
+      ${c.forma_prevista === 'PIX' ? '<span class="pill azul" title="Pagar via PIX">🔑 PIX</span>' : ''}
+      ${c.forma_prevista === 'BOLETO' ? '<span class="pill cinza">boleto</span>' : ''}</td>
     <td style="font-size:12px">${esc(c.categoria || '—')}</td>
-    <td>${esc(c.documento || '—')}</td>
+    <td>${esc(c.documento || '—')}
+      ${c.tem_boleto ? `<button class="btn-ic" onclick='verBoleto(${c.id})' title="Ver boleto">📎</button>` : ''}</td>
     <td class="num">${N(c.valor)}</td>
     <td class="num">${Number(c.valor_pago) > 0 ? N(c.valor_pago) : '—'}</td>
     <td class="num"><strong>${c.status === 'pago' ? '—' : N(c.saldo)}</strong></td>
@@ -205,7 +208,7 @@ function renderPagar() {
 async function abrirConta(id) {
   if (!CP_CATEGORIAS.length) await carregarCategoriasCp();
 
-  ['cp_fornecedor_busca', 'cp_descricao', 'cp_documento', 'cp_valor', 'cp_observacao']
+  ['cp_fornecedor_busca', 'cp_descricao', 'cp_documento', 'cp_valor', 'cp_observacao', 'cp_pix_dados']
     .forEach((c) => setVal(c, ''));
   setVal('cp_id', '');
   setVal('cp_fornecedor_id', '');
@@ -214,6 +217,10 @@ async function abrirConta(id) {
   setVal('cp_vencimento', somaDias(hojeIso(), 30));
   setVal('cp_parcelas', '1');
   setVal('cp_intervalo', '30');
+  setVal('cp_forma_prevista', '');
+  if (el('cp_boleto_arq')) el('cp_boleto_arq').value = '';
+  if (el('cp_boleto_atual')) el('cp_boleto_atual').innerHTML = '';
+  aplicarFormaPrevista();
   el('cp_forn_sel').textContent = '';
   el('cp_forn_resultado').style.display = 'none';
   el('cp_preview').innerHTML = '';
@@ -235,6 +242,14 @@ async function abrirConta(id) {
       setVal('cp_emissao', (c.emissao || '').slice(0, 10));
       setVal('cp_vencimento', (c.vencimento || '').slice(0, 10));
       setVal('cp_observacao', c.observacao || '');
+      setVal('cp_forma_prevista', c.forma_prevista || '');
+      setVal('cp_pix_dados', c.pix_dados || '');
+      aplicarFormaPrevista();
+      if (c.tem_boleto && el('cp_boleto_atual')) {
+        el('cp_boleto_atual').innerHTML = `✅ boleto anexado —
+          <a href="#" onclick="verBoleto(${c.id});return false">ver</a> ·
+          <a href="#" onclick="removerBoleto(${c.id});return false">remover</a>`;
+      }
       el('cp_linha_parcelas').style.display = 'none';
       el('contaTitulo').textContent = c.total_parcelas > 1
         ? `Editar parcela ${c.parcela} de ${c.total_parcelas}`
@@ -335,12 +350,48 @@ function somarPrazoJs(iso, dias) {
   return dt.toISOString().slice(0, 10);
 }
 
+/* [1.16] mostra o campo certo conforme "como vai pagar" */
+function aplicarFormaPrevista() {
+  const f = val('cp_forma_prevista');
+  if (el('cp_boleto_box')) el('cp_boleto_box').style.display = f === 'BOLETO' ? '' : 'none';
+  if (el('cp_pix_box')) el('cp_pix_box').style.display = f === 'PIX' ? '' : 'none';
+}
+
+/* lê um arquivo escolhido como base64 (sem o prefixo data:) */
+function lerBoletoBase64(input) {
+  return new Promise((resolve, reject) => {
+    const f = input && input.files && input.files[0];
+    if (!f) { resolve(null); return; }
+    if (f.size > 4 * 1024 * 1024) { reject(new Error('O arquivo tem mais de 4 MB. Use um menor.')); return; }
+    const fr = new FileReader();
+    fr.onload = () => resolve({ nome: f.name, tipo: f.type, dados: String(fr.result).split(',')[1] || '' });
+    fr.onerror = () => reject(new Error('Não consegui ler o arquivo.'));
+    fr.readAsDataURL(f);
+  });
+}
+
+function verBoleto(id) {
+  window.open('/api/cp/contas/' + id + '/boleto?inline=1&token=' + encodeURIComponent(TOKEN), '_blank');
+}
+async function removerBoleto(id) {
+  if (!confirm('Remover o boleto anexado?')) return;
+  try {
+    await api('/api/cp/contas/' + id + '/boleto', { method: 'DELETE' });
+    if (el('cp_boleto_atual')) el('cp_boleto_atual').innerHTML = '';
+    carregarPagar();
+    ok('Boleto removido.');
+  } catch (e) { erro(e.message); }
+}
+
 async function salvarConta() {
   if (valor(el('cp_valor').value) <= 0) { alerta('Informe o valor da conta.'); return; }
   if (!val('cp_vencimento')) { alerta('Informe o vencimento.'); return; }
   if (!val('cp_fornecedor_busca') && !val('cp_descricao')) {
     alerta('Informe o fornecedor ou a descrição.'); return;
   }
+  let boleto = null;
+  try { boleto = await lerBoletoBase64(el('cp_boleto_arq')); }
+  catch (e) { erro(e.message); return; }
   try {
     const r = await api('/api/cp/contas', {
       method: 'POST',
@@ -356,9 +407,20 @@ async function salvarConta() {
         valor: valor(el('cp_valor').value),
         parcelas: parseInt(val('cp_parcelas')) || 1,
         intervalo_dias: parseInt(val('cp_intervalo')) || 30,
-        observacao: val('cp_observacao')
+        observacao: val('cp_observacao'),
+        forma_prevista: val('cp_forma_prevista'),
+        pix_dados: val('cp_pix_dados')
       }
     });
+    // [1.16] anexa o boleto, se escolhido (na conta editada, ou na 1ª parcela da nova)
+    if (boleto) {
+      const alvo = r.id || (r.ids && r.ids[0]);
+      if (alvo) {
+        try {
+          await api('/api/cp/contas/' + alvo + '/boleto', { method: 'POST', body: boleto });
+        } catch (e) { alerta('Conta salva, mas o boleto não subiu: ' + e.message); }
+      }
+    }
     fecharModal('modalConta');
     carregarPagar();
     ok(r.parcelas > 1 ? `${r.parcelas} parcelas lançadas.` : 'Conta lançada.');
@@ -381,11 +443,22 @@ function abrirPagarConta(c) {
         venc. ${dataBr(c.vencimento)}
         ${c.status === 'vencido' ? `<span class="pill vermelha">${c.dias} dias em atraso</span>` : ''}</div>
       <div style="margin-top:5px;font-size:16px"><strong>Saldo: ${R$(c.saldo)}</strong></div>
+      ${c.forma_prevista === 'PIX' && txtPix(c) ? `<div style="margin-top:7px;background:#eef2f7;border-radius:6px;padding:8px 10px">
+        <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">🔑 Dados do PIX</div>
+        <div style="word-break:break-all">${esc(txtPix(c))}</div>
+        <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(txtPix(c)).replace(/'/g, "\\'")}')">Copiar</button></div>` : ''}
+      ${c.tem_boleto ? `<div style="margin-top:7px"><button class="btn" onclick="verBoleto(${c.id})">📎 Ver boleto</button></div>` : ''}
     </div>`;
   el('modalPagarConta').dataset.saldo = c.saldo;
   mostrarSairCaixa();
   abrirModal('modalPagarConta');
   setTimeout(() => el('pgValor').select(), 100);
+}
+
+function txtPix(c) { return c.pix_dados || ''; }
+function copiarPix(t) {
+  if (navigator.clipboard) { navigator.clipboard.writeText(t).then(() => ok('Dados do PIX copiados.'), () => alerta('Copie manualmente.')); }
+  else alerta('Copie manualmente: ' + t);
 }
 
 function recalcPagarConta() {

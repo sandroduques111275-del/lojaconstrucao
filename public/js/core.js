@@ -254,6 +254,7 @@ function irPara(secao) {
     caixa: carregarCaixa,
     entradaNota: carregarEntradaNota,
     expedicao: carregarExpedicao,
+    obras: carregarObras,
     receber: carregarReceber,
     cartao: carregarCartao,
     operadoras: carregarOperadoras,

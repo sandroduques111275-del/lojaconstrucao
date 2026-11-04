@@ -63,6 +63,7 @@
       <a data-secao="caixa" onclick="irPara('caixa')"><span class="ic">💵</span> Caixa</a>
       <a data-secao="entradaNota" onclick="irPara('entradaNota')"><span class="ic">📥</span> Entrada de Nota</a>
       <a data-secao="expedicao" onclick="irPara('expedicao')"><span class="ic">🚚</span> Expedição / Entregas <span class="badge" id="badgeEntregas" style="display:none"></span></a>
+      <a data-secao="obras" onclick="irPara('obras')"><span class="ic">🏗️</span> Obras</a>
 
       <div class="grupo-tit">Financeiro</div>
       <a data-secao="receber" onclick="irPara('receber')"><span class="ic">📆</span> Contas a Receber <span class="badge" id="badgeVencidos" style="display:none"></span></a>
@@ -429,6 +430,23 @@
           escolher a cada venda.</div>
         </div>
         <div class="tabela-wrap" id="opLista"></div>
+      </section>
+
+      <!-- ============ OBRAS (1.16) ============ -->
+      <section class="secao" id="sec-obras">
+        <div class="cabecalho-secao">
+          <div><h2>Obras</h2><div class="desc">Material que sai (a preço de custo) para as obras do dono e o saldo a acertar com a loja</div></div>
+          <div class="acoes">
+            <select id="obraStatus" onchange="carregarObras()" style="padding:8px 10px;border:1px solid var(--cinza-linha);border-radius:6px">
+              <option value="">Todas as obras</option>
+              <option value="andamento">Em andamento</option>
+              <option value="concluida">Concluídas</option>
+            </select>
+            <button class="btn laranja" onclick="abrirCadObra()">➕ Nova obra</button>
+          </div>
+        </div>
+        <div class="grid g4" id="obrasTotais" style="margin-bottom:14px"></div>
+        <div class="tabela-wrap" id="obrasLista"></div>
       </section>
 
       <!-- ============ CONTAS A PAGAR ============ -->
@@ -1767,6 +1785,89 @@
   </div>
 </div>
 
+<!-- [1.16] OBRAS: cadastro -->
+<div class="modal" id="modalObraCad">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3 id="obraCadTitulo">Nova obra</h3><button class="fechar" onclick="fecharModal('modalObraCad')">×</button></div>
+    <div class="modal-corpo">
+      <input type="hidden" id="obra_id">
+      <div class="campo"><label>Nome da obra *</label><input id="obra_nome" placeholder="ex.: Prédio 10x30 Laje"></div>
+      <div class="linha">
+        <div class="campo"><label>Responsável</label><input id="obra_responsavel"></div>
+        <div class="campo m"><label>Telefone</label><input id="obra_telefone"></div>
+      </div>
+      <div class="campo"><label>Endereço</label><input id="obra_endereco"></div>
+      <div class="campo"><label>Situação</label>
+        <select id="obra_status"><option value="andamento">Em andamento</option><option value="concluida">Concluída</option></select>
+      </div>
+      <div class="campo"><label>Observação</label><textarea id="obra_observacao" rows="2"></textarea></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraCad')">Cancelar</button>
+      <button class="btn primario" onclick="salvarObra()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: detalhe (saldo, saídas, pagamentos) -->
+<div class="modal" id="modalObra">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3 id="obraTitulo">Obra</h3><button class="fechar" onclick="fecharModal('modalObra')">×</button></div>
+    <div class="modal-corpo" id="obraCorpo"></div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObra')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: saída de material -->
+<div class="modal" id="modalObraSaida">
+  <div class="modal-box largo">
+    <div class="modal-cab"><h3>Saída de material pra obra</h3><button class="fechar" onclick="fecharModal('modalObraSaida')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo m"><label>Data</label><input type="date" id="saidaData"></div>
+        <div class="campo"><label>Observação</label><input id="saidaObs" placeholder="ex.: entregue na obra / retirado por..."></div>
+      </div>
+      <div class="campo" style="position:relative">
+        <label>Buscar material (nome ou código)</label>
+        <input id="saidaBusca" oninput="buscarProdutoSaida()" placeholder="digite para buscar...">
+        <div class="resultado-busca" id="saidaResultado" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:5"></div>
+      </div>
+      <div class="aviso info" style="margin:4px 0 8px"><span>💡</span><div>O material sai pelo <strong>preço de custo</strong> (você pode ajustar o custo de cada item). O estoque baixa ao salvar.</div></div>
+      <div id="saidaItens"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraSaida')">Cancelar</button>
+      <button class="btn primario" onclick="salvarSaidaObra()">📦 Registrar saída</button>
+    </div>
+  </div>
+</div>
+
+<!-- [1.16] OBRAS: pagamento -->
+<div class="modal" id="modalObraPagto">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>Pagamento da obra</h3><button class="fechar" onclick="fecharModal('modalObraPagto')">×</button></div>
+    <div class="modal-corpo">
+      <div class="linha">
+        <div class="campo m"><label>Data</label><input type="date" id="pagtoData"></div>
+        <div class="campo m"><label>Valor</label><input id="pagtoValor" inputmode="decimal" placeholder="0,00"></div>
+      </div>
+      <div class="campo"><label>Forma</label>
+        <select id="pagtoForma">
+          <option>PIX</option><option>DINHEIRO</option><option>TRANSFERENCIA</option>
+          <option>CARTAO DEBITO</option><option>CARTAO CREDITO</option><option>CHEQUE</option>
+        </select>
+      </div>
+      <div class="campo"><label>Observação</label><input id="pagtoObs"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalObraPagto')">Cancelar</button>
+      <button class="btn primario" onclick="salvarPagtoObra()">💵 Registrar pagamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- [1.14] senha de fabrica: troca obrigatoria (na internet) ou sugerida (em casa) -->
 <div class="modal" id="modalSenhaPadrao">
   <div class="modal-box estreito">
@@ -2025,6 +2126,29 @@
         <div class="campo"><label>Observação</label><input id="cp_observacao"></div>
       </div>
       <div id="cp_preview"></div>
+
+      <!-- [1.16] como pagar: boleto (anexa o arquivo) ou PIX (guarda os dados) -->
+      <div style="border-top:1px solid var(--cinza-linha);margin-top:12px;padding-top:12px">
+        <div class="linha" style="margin-bottom:0">
+          <div class="campo m"><label>Como vai pagar</label>
+            <select id="cp_forma_prevista" onchange="aplicarFormaPrevista()">
+              <option value="">— não definir —</option>
+              <option value="BOLETO">Boleto</option>
+              <option value="PIX">PIX</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+          <div class="campo" id="cp_boleto_box" style="display:none">
+            <label>Boleto (PDF ou foto)</label>
+            <input type="file" id="cp_boleto_arq" accept="application/pdf,image/*">
+            <div id="cp_boleto_atual" style="font-size:12px;color:var(--texto-fraco);margin-top:4px"></div>
+          </div>
+          <div class="campo" id="cp_pix_box" style="display:none">
+            <label>Dados do PIX (chave ou copia-e-cola)</label>
+            <input id="cp_pix_dados" placeholder="ex.: chave CNPJ 00.000.000/0001-00">
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal-acoes">
       <button class="btn" onclick="fecharModal('modalConta')">Cancelar</button>
@@ -2190,5 +2314,6 @@
 <script src="js/fiscal.js"></script>
 <script src="js/ncm.js"></script>
 <script src="js/expedicao.js"></script>
+<script src="js/obras.js"></script>
 </body>
 </html>
