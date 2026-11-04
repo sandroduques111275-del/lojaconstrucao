@@ -331,11 +331,20 @@ function aplicarPeriodo(containerId, idDe, idAte, chave, fn) {
 
   if (chave === 'ontem') { const d = new Date(h); d.setDate(d.getDate() - 1); de = ate = iso(d); }
   else if (chave === 'semana') { const d = new Date(h); d.setDate(d.getDate() - 6); de = iso(d); }
-  else if (chave === 'mes') { de = iso(new Date(h.getFullYear(), h.getMonth(), 1)); }
+  else if (chave === 'mes') {
+    // [1.15] "Este mês" = do dia 1 ao ULTIMO dia do mes (dia 0 do mes seguinte),
+    // nao so ate hoje — senao conta a vencer ainda neste mes nao aparece
+    de = iso(new Date(h.getFullYear(), h.getMonth(), 1));
+    ate = iso(new Date(h.getFullYear(), h.getMonth() + 1, 0));
+  }
   else if (chave === 'mespassado') {
     de = iso(new Date(h.getFullYear(), h.getMonth() - 1, 1));
     ate = iso(new Date(h.getFullYear(), h.getMonth(), 0));
-  } else if (chave === 'ano') { de = iso(new Date(h.getFullYear(), 0, 1)); }
+  } else if (chave === 'ano') {
+    // [1.15] "Este ano" ate 31/dez, mesma logica do mes
+    de = iso(new Date(h.getFullYear(), 0, 1));
+    ate = iso(new Date(h.getFullYear(), 11, 31));
+  }
   else if (chave === 'tudo') { de = '2000-01-01'; ate = iso(new Date(h.getFullYear() + 1, 0, 1)); }
 
   setVal(idDe, de);
@@ -536,7 +545,11 @@ function imprimirTeste() {
 async function carregarConfig() {
   CONFIG = await api('/api/config');
   el('topoFantasia').textContent = CONFIG.loja_fantasia || CONFIG.loja_nome || 'Material de Construção';
-  if (el('topoVersao') && CONFIG.versao) el('topoVersao').textContent = 'v' + CONFIG.versao;
+  // [1.15] no topo só o número (v1.15); a descrição completa fica no título/rodapé
+  if (el('topoVersao') && CONFIG.versao) {
+    el('topoVersao').textContent = 'v' + String(CONFIG.versao).split(' ')[0];
+    el('topoVersao').title = CONFIG.versao;
+  }
   document.title = (CONFIG.loja_fantasia || 'Sistema de Vendas') + ' — PDV';
 }
 
@@ -715,6 +728,47 @@ async function restaurarBackup() {
   }
 }
 
+/* ==========================================================================
+   [1.15] CELULAR: tabela vira cartão
+   Cada célula das tabelas de listagem (.tabela-wrap) recebe um data-label com
+   o nome da coluna (lido do cabeçalho). No celular o CSS usa esse rótulo para
+   montar os cartões. Roda sozinho toda vez que uma tabela é (re)desenhada.
+   ========================================================================== */
+let _obsTabelas = null;
+
+function rotularTabelas() {
+  document.querySelectorAll('.tabela-wrap table').forEach((tab) => {
+    const ths = [...tab.querySelectorAll('thead th')].map((th) =>
+      th.textContent.replace(/[↕▲▼]/g, '').trim());
+    if (!ths.length) return;
+    tab.querySelectorAll('tbody tr').forEach((tr) => {
+      if (tr.classList.contains('grupo-forn')) return;   // faixa de grupo: não é cartão
+      const tds = tr.children;
+      if (tds.length !== ths.length) return;             // linha com colspan: ignora
+      for (let i = 0; i < tds.length; i++) {
+        const lab = ths[i] || '';
+        if (tds[i].getAttribute('data-label') !== lab) tds[i].setAttribute('data-label', lab);
+        if (!lab) tds[i].classList.add('acoes');
+      }
+    });
+  });
+}
+
+function iniciarRotulosTabelas() {
+  if (_obsTabelas) { rotularTabelas(); return; }
+  const alvo = document.body;
+  const run = () => {
+    _obsTabelas.disconnect();
+    try { rotularTabelas(); } catch (e) { /* nunca derruba a tela */ }
+    _obsTabelas.observe(alvo, { childList: true, subtree: true });
+  };
+  _obsTabelas = new MutationObserver(() => {
+    clearTimeout(_obsTabelas._t);
+    _obsTabelas._t = setTimeout(run, 80);
+  });
+  run();
+}
+
 /* ---------------- start ---------------- */
 async function iniciar() {
   el('telaLogin').style.display = 'none';
@@ -761,6 +815,9 @@ async function iniciar() {
 
   // [1.11] uma vez por semana: compras com nota x cartao x NFC-e emitidas
   if (typeof verificarAvisoSemanal === 'function') setTimeout(verificarAvisoSemanal, 800);
+
+  // [1.15] celular: tabelas viram cartoes (injeta os rotulos e observa mudancas)
+  iniciarRotulosTabelas();
 
   // [1.14] em casa, senha de fabrica so lembra (na internet ja parou la em cima)
   if (USUARIO.trocar_senha) setTimeout(() => abrirSenhaPadrao(false), 400);

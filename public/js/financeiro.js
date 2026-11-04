@@ -13,6 +13,28 @@ async function carregarCategoriasCp() {
 
 /* ============================ CONTAS A PAGAR ============================ */
 
+/* [1.15] guardo o que veio do servidor para ordenar/agrupar na tela, sem
+   precisar consultar de novo a cada clique. */
+let CP_CONTAS = [];
+let CP_TOTAIS = {};
+let CP_ORD = { col: 'vencimento', dir: 1 };   // coluna e sentido (1 crescente, -1 decrescente)
+let CP_AGRUPAR = false;
+const CP_GRUPOS_FECHADOS = new Set();          // nomes de fornecedor recolhidos
+
+/* como ordenar cada coluna: 'texto', 'numero' ou 'data' */
+const CP_COLUNAS = {
+  vencimento: { rotulo: 'Vencimento', tipo: 'data', valor: (c) => c.vencimento },
+  atraso:     { rotulo: 'Atraso', classe: 'centro', tipo: 'numero', valor: (c) => (c.status === 'vencido' ? Number(c.dias) : -1) },
+  fornecedor: { rotulo: 'Fornecedor', tipo: 'texto', valor: (c) => c.fornecedor || '' },
+  descricao:  { rotulo: 'Descrição', tipo: 'texto', valor: (c) => c.descricao || '' },
+  categoria:  { rotulo: 'Categoria', tipo: 'texto', valor: (c) => c.categoria || '' },
+  documento:  { rotulo: 'Documento', tipo: 'texto', valor: (c) => c.documento || '' },
+  valor:      { rotulo: 'Valor', classe: 'num', tipo: 'numero', valor: (c) => Number(c.valor) },
+  pago:       { rotulo: 'Pago', classe: 'num', tipo: 'numero', valor: (c) => Number(c.valor_pago) },
+  saldo:      { rotulo: 'Saldo', classe: 'num', tipo: 'numero', valor: (c) => (c.status === 'pago' ? 0 : Number(c.saldo)) },
+  situacao:   { rotulo: 'Situação', classe: 'centro', tipo: 'texto', valor: (c) => c.status || '' }
+};
+
 async function carregarPagar() {
   try {
     if (!CP_CATEGORIAS.length) await carregarCategoriasCp();
@@ -25,52 +47,159 @@ async function carregarPagar() {
     if (val('cpBusca')) p.set('q', val('cpBusca'));
 
     const r = await api('/api/cp/contas?' + p.toString());
+    CP_CONTAS = r.contas || [];
+    CP_TOTAIS = r.totais || {};
 
     el('cpTotais').innerHTML = `
-      ${tile('Em aberto', R$(r.totais.em_aberto), 'total a pagar no filtro', '')}
-      ${tile('Vencidas', R$(r.totais.vencidas), r.totais.qtd_vencidas + ' conta(s) em atraso',
-        r.totais.vencidas > 0 ? 'vermelho' : 'verde')}
-      ${tile('Vencem hoje', R$(r.totais.vence_hoje), 'pagar hoje', 'laranja')}
-      ${tile('Já pago', R$(r.totais.pago), 'no filtro atual', 'verde')}`;
+      ${tile('Em aberto', R$(CP_TOTAIS.em_aberto), 'total a pagar no filtro', '')}
+      ${tile('Vencidas', R$(CP_TOTAIS.vencidas), CP_TOTAIS.qtd_vencidas + ' conta(s) em atraso',
+        CP_TOTAIS.vencidas > 0 ? 'vermelho' : 'verde')}
+      ${tile('Vencem hoje', R$(CP_TOTAIS.vence_hoje), 'pagar hoje', 'laranja')}
+      ${tile('Já pago', R$(CP_TOTAIS.pago), 'no filtro atual', 'verde')}`;
 
-    const pill = { pago: 'verde', vencido: 'vermelha', vence_hoje: 'amarela', aberto: 'azul' };
-    const rot = { pago: 'pago', vencido: 'vencida', vence_hoje: 'vence hoje', aberto: 'em aberto' };
-
-    el('cpLista').innerHTML = r.contas.length ? `
-      <table><thead><tr>
-        <th>Vencimento</th><th class="centro">Atraso</th><th>Fornecedor</th><th>Descrição</th>
-        <th>Categoria</th><th>Documento</th><th class="num">Valor</th><th class="num">Pago</th>
-        <th class="num">Saldo</th><th class="centro">Situação</th><th></th>
-      </tr></thead><tbody>
-      ${r.contas.map((c) => `<tr>
-        <td style="white-space:nowrap;${c.status === 'vencido' ? 'color:var(--vermelho);font-weight:700' : ''}">${dataBr(c.vencimento)}</td>
-        <td class="centro">${c.status === 'vencido' ? c.dias + ' d' : '—'}</td>
-        <td><strong>${esc(c.fornecedor || '—')}</strong></td>
-        <td>${esc(c.descricao || '—')}
-          ${c.total_parcelas > 1 ? `<span class="pill cinza">${c.parcela}/${c.total_parcelas}</span>` : ''}</td>
-        <td style="font-size:12px">${esc(c.categoria || '—')}</td>
-        <td>${esc(c.documento || '—')}</td>
-        <td class="num">${N(c.valor)}</td>
-        <td class="num">${Number(c.valor_pago) > 0 ? N(c.valor_pago) : '—'}</td>
-        <td class="num"><strong>${c.status === 'pago' ? '—' : N(c.saldo)}</strong></td>
-        <td class="centro"><span class="pill ${pill[c.status]}">${rot[c.status]}</span></td>
-        <td class="centro" style="white-space:nowrap">
-          ${c.status !== 'pago'
-            ? `<button class="btn pequeno verde" onclick='abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
-               <button class="btn-ic" onclick="abrirConta(${c.id})" title="Editar">✏️</button>`
-            : `<button class="btn-ic" onclick="estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
-          <button class="btn-ic" onclick="excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
-        </td></tr>`).join('')}
-      </tbody>
-      <tfoot><tr>
-        <td colspan="6">${r.contas.length} conta(s)</td>
-        <td class="num">${N(r.contas.reduce((s, c) => s + Number(c.valor), 0))}</td>
-        <td class="num">${N(r.totais.pago)}</td>
-        <td class="num">${N(r.totais.em_aberto)}</td>
-        <td colspan="2"></td>
-      </tr></tfoot></table>`
-      : '<div class="vazio"><span class="ic">💸</span>Nenhuma conta no filtro.</div>';
+    renderPagar();
   } catch (e) { erro(e.message); }
+}
+
+/** Ordena uma cópia das contas pela coluna/sentido atuais. */
+function cpOrdenadas(contas) {
+  const def = CP_COLUNAS[CP_ORD.col] || CP_COLUNAS.vencimento;
+  const arr = contas.slice();
+  arr.sort((a, b) => {
+    let x = def.valor(a), y = def.valor(b);
+    let cmp;
+    if (def.tipo === 'numero' || def.tipo === 'data') {
+      if (def.tipo === 'data') { x = String(x || ''); y = String(y || ''); cmp = x < y ? -1 : x > y ? 1 : 0; }
+      else cmp = (Number(x) || 0) - (Number(y) || 0);
+    } else {
+      cmp = String(x).localeCompare(String(y), 'pt-BR', { sensitivity: 'base', numeric: true });
+    }
+    if (cmp === 0) {   // desempate estável pelo vencimento e id
+      cmp = String(a.vencimento || '').localeCompare(String(b.vencimento || '')) || (a.id - b.id);
+      return cmp;
+    }
+    return cmp * CP_ORD.dir;
+  });
+  return arr;
+}
+
+function cpClicarColuna(col) {
+  if (CP_ORD.col === col) CP_ORD.dir = -CP_ORD.dir;
+  else { CP_ORD.col = col; CP_ORD.dir = 1; }
+  renderPagar();
+}
+
+function alternarAgruparCp() {
+  CP_AGRUPAR = !CP_AGRUPAR;
+  const b = el('cpBtnAgrupar');
+  if (b) {
+    b.classList.toggle('primario', CP_AGRUPAR);
+    b.innerHTML = CP_AGRUPAR ? '👥 Agrupado por fornecedor ✓' : '👥 Agrupar por fornecedor';
+  }
+  renderPagar();
+}
+
+function cpAlternarGrupo(nome) {
+  if (CP_GRUPOS_FECHADOS.has(nome)) CP_GRUPOS_FECHADOS.delete(nome);
+  else CP_GRUPOS_FECHADOS.add(nome);
+  renderPagar();
+}
+
+/** Cabeçalho da tabela, com as setas de ordenação. */
+function cpThead() {
+  const th = (col) => {
+    const d = CP_COLUNAS[col];
+    const ativa = CP_ORD.col === col;
+    const seta = ativa ? (CP_ORD.dir === 1 ? '▲' : '▼') : '↕';
+    return `<th class="ord ${d.classe || ''} ${ativa ? 'ativa' : ''}" onclick="cpClicarColuna('${col}')" title="Ordenar por ${esc(d.rotulo)}">${esc(d.rotulo)}<span class="seta">${seta}</span></th>`;
+  };
+  return `<thead><tr>
+    ${th('vencimento')}${th('atraso')}${th('fornecedor')}${th('descricao')}
+    ${th('categoria')}${th('documento')}${th('valor')}${th('pago')}
+    ${th('saldo')}${th('situacao')}<th></th>
+  </tr></thead>`;
+}
+
+const CP_PILL = { pago: 'verde', vencido: 'vermelha', vence_hoje: 'amarela', aberto: 'azul' };
+const CP_ROT = { pago: 'pago', vencido: 'vencida', vence_hoje: 'vence hoje', aberto: 'em aberto' };
+
+/** Uma linha de conta (11 colunas). */
+function cpLinha(c) {
+  return `<tr>
+    <td style="white-space:nowrap;${c.status === 'vencido' ? 'color:var(--vermelho);font-weight:700' : ''}">${dataBr(c.vencimento)}</td>
+    <td class="centro">${c.status === 'vencido' ? c.dias + ' d' : '—'}</td>
+    <td><strong>${esc(c.fornecedor || '—')}</strong></td>
+    <td>${esc(c.descricao || '—')}
+      ${c.total_parcelas > 1 ? `<span class="pill cinza">${c.parcela}/${c.total_parcelas}</span>` : ''}</td>
+    <td style="font-size:12px">${esc(c.categoria || '—')}</td>
+    <td>${esc(c.documento || '—')}</td>
+    <td class="num">${N(c.valor)}</td>
+    <td class="num">${Number(c.valor_pago) > 0 ? N(c.valor_pago) : '—'}</td>
+    <td class="num"><strong>${c.status === 'pago' ? '—' : N(c.saldo)}</strong></td>
+    <td class="centro"><span class="pill ${CP_PILL[c.status]}">${CP_ROT[c.status]}</span></td>
+    <td class="centro" style="white-space:nowrap">
+      ${c.status !== 'pago'
+        ? `<button class="btn pequeno verde" onclick='abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
+           <button class="btn-ic" onclick="abrirConta(${c.id})" title="Editar">✏️</button>`
+        : `<button class="btn-ic" onclick="estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
+      <button class="btn-ic" onclick="excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
+    </td></tr>`;
+}
+
+/** Desenha a tabela a partir de CP_CONTAS, respeitando ordenação e agrupamento. */
+function renderPagar() {
+  if (!CP_CONTAS.length) {
+    el('cpLista').innerHTML = '<div class="vazio"><span class="ic">💸</span>Nenhuma conta no filtro.</div>';
+    return;
+  }
+
+  const somaValor = CP_CONTAS.reduce((s, c) => s + Number(c.valor), 0);
+  let corpo;
+
+  if (!CP_AGRUPAR) {
+    corpo = cpOrdenadas(CP_CONTAS).map(cpLinha).join('');
+  } else {
+    /* agrupa por fornecedor. Dentro do grupo, usa a ordenação escolhida.
+       Os grupos ficam em ordem de maior saldo em aberto (o que mais importa
+       no Contas a Pagar); se a ordenação for por fornecedor, vão em A–Z. */
+    const grupos = new Map();
+    CP_CONTAS.forEach((c) => {
+      const nome = c.fornecedor || '— sem fornecedor —';
+      if (!grupos.has(nome)) grupos.set(nome, []);
+      grupos.get(nome).push(c);
+    });
+    const lista = [...grupos.entries()].map(([nome, contas]) => {
+      const aberto = contas.reduce((s, c) => s + (c.status === 'pago' ? 0 : Number(c.saldo)), 0);
+      const total = contas.reduce((s, c) => s + Number(c.valor), 0);
+      return { nome, contas, aberto, total };
+    });
+    if (CP_ORD.col === 'fornecedor') lista.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }) * CP_ORD.dir);
+    else lista.sort((a, b) => b.aberto - a.aberto || b.total - a.total);
+
+    corpo = lista.map((g) => {
+      const fechado = CP_GRUPOS_FECHADOS.has(g.nome);
+      const nomeAttr = JSON.stringify(g.nome).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+      const cab = `<tr class="grupo-forn" onclick="cpAlternarGrupo(${nomeAttr})"><td colspan="11">
+        <div class="grupo-linha">
+          <span>${fechado ? '▸' : '▾'} <strong>${esc(g.nome)}</strong>
+            <span class="pill cinza">${g.contas.length} conta(s)</span></span>
+          <span class="grupo-tot">total ${N(g.total)} · em aberto
+            <strong style="${g.aberto > 0 ? 'color:var(--vermelho)' : ''}">${N(g.aberto)}</strong></span>
+        </div></td></tr>`;
+      const linhas = fechado ? '' : cpOrdenadas(g.contas).map(cpLinha).join('');
+      return cab + linhas;
+    }).join('');
+  }
+
+  el('cpLista').innerHTML = `
+    <table>${cpThead()}<tbody>${corpo}</tbody>
+    <tfoot><tr>
+      <td colspan="6">${CP_CONTAS.length} conta(s)${CP_AGRUPAR ? ' em ' + new Set(CP_CONTAS.map((c) => c.fornecedor || '—')).size + ' fornecedor(es)' : ''}</td>
+      <td class="num">${N(somaValor)}</td>
+      <td class="num">${N(CP_TOTAIS.pago)}</td>
+      <td class="num">${N(CP_TOTAIS.em_aberto)}</td>
+      <td colspan="2"></td>
+    </tr></tfoot></table>`;
 }
 
 async function abrirConta(id) {
