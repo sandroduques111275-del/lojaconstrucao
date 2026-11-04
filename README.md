@@ -118,6 +118,29 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 🏗️ Obras do dono (1.16)
+
+Menu **Operação → Obras**. Controla o material que sai da loja para as obras do
+dono e quanto ele deve acertar com a loja.
+
+- Cadastro de **várias obras** (nome, responsável, endereço).
+- **Registrar saída de material**: busca o produto e a quantidade; sai a **preço
+  de custo** (ajustável item a item); o estoque baixa na hora. Não passa pelo
+  caixa nem emite nota — é controle interno.
+- Cada obra mostra **retirado (custo)**, **pago** e **saldo a pagar**; o botão
+  **Registrar pagamento** abate o saldo.
+- **Extrato** imprimível (materiais + pagamentos + saldo) para entregar ao dono.
+- **Resumo por material** e estorno de saída (devolve ao estoque) ou de pagamento.
+- Acesso: Administrador e Gerente (liberável a outros perfis em *Configurações →
+  Perfis → Obras*).
+
+### 💳 Contas a Pagar: boleto e PIX (1.16)
+
+- Ao lançar/editar uma conta, escolha **como vai pagar**: **Boleto** (anexa o PDF
+  ou foto — fica guardado no sistema e vai no backup; um 📎 na lista e um botão na
+  tela de pagar abrem o boleto) ou **PIX** (guarda os dados do PIX, que aparecem
+  com botão **Copiar** na hora de pagar; a conta ganha a etiqueta 🔑 PIX).
+
 ### 📱 Contas a Pagar e celular (1.15)
 
 - **No celular, as tabelas viram cartões**: cada linha vira um cartãozinho com

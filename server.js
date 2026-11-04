@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.15 - Contas a Pagar: ordenar e agrupar por fornecedor';
+const VERSAO = '1.16 - Obras (material do dono) e boleto/PIX nas contas';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -666,6 +666,37 @@ function criarEstrutura() {
     justificativa TEXT, protocolo TEXT, status TEXT, motivo TEXT,
     xml_retorno TEXT, data TEXT, usuario TEXT
   );
+
+  /* [1.16] OBRAS: material que sai (a preco de custo) para as obras do dono,
+     por obra, com saldo a acertar com a loja. Nao e venda fiscal, nao passa
+     pelo caixa; o estoque baixa na saida. */
+  CREATE TABLE IF NOT EXISTS obras (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT, responsavel TEXT, endereco TEXT, telefone TEXT, observacao TEXT,
+    status TEXT DEFAULT 'andamento', criado_em TEXT, usuario TEXT
+  );
+  CREATE TABLE IF NOT EXISTS obra_saidas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    obra_id INTEGER, data TEXT, observacao TEXT, total REAL DEFAULT 0,
+    usuario TEXT, criado_em TEXT
+  );
+  CREATE TABLE IF NOT EXISTS obra_saida_itens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    saida_id INTEGER, produto_id INTEGER, codigo TEXT, descricao TEXT,
+    unidade TEXT, quantidade REAL, custo_unit REAL, total REAL
+  );
+  CREATE TABLE IF NOT EXISTS obra_pagamentos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    obra_id INTEGER, data TEXT, valor REAL, forma TEXT, observacao TEXT,
+    usuario TEXT, criado_em TEXT
+  );
+
+  /* [1.16] anexo (boleto) das contas a pagar — guardado no proprio banco
+     (base64), para o backup/restauracao levar junto. Um anexo por conta. */
+  CREATE TABLE IF NOT EXISTS cp_anexos (
+    conta_id INTEGER PRIMARY KEY,
+    nome TEXT, tipo TEXT, dados TEXT, enviado_em TEXT, usuario TEXT
+  );
   `);
 
   // indices que ajudam nas telas de consulta
@@ -688,6 +719,9 @@ function criarEstrutura() {
     CREATE INDEX IF NOT EXISTS ix_entregas_sit   ON entregas (situacao);
     CREATE INDEX IF NOT EXISTS ix_entrega_itens  ON entrega_itens (entrega_id);
     CREATE INDEX IF NOT EXISTS ix_entrega_prod   ON entrega_itens (produto_id);
+    CREATE INDEX IF NOT EXISTS ix_obra_saida     ON obra_saidas (obra_id);
+    CREATE INDEX IF NOT EXISTS ix_obra_saida_item ON obra_saida_itens (saida_id);
+    CREATE INDEX IF NOT EXISTS ix_obra_pag       ON obra_pagamentos (obra_id);
   `);
 
   // colunas novas em bases que ja existiam antes destes modulos
@@ -720,6 +754,10 @@ function criarEstrutura() {
      passa dai ate trocar) e IP de onde o login veio */
   try { db.run('ALTER TABLE sessoes ADD COLUMN trocar INTEGER DEFAULT 0'); } catch (e) { /* ja existe */ }
   try { db.run('ALTER TABLE sessoes ADD COLUMN ip TEXT'); } catch (e) { /* ja existe */ }
+
+  // [1.16] contas a pagar: forma prevista (boleto/pix) e os dados do PIX
+  try { db.run('ALTER TABLE cp_contas ADD COLUMN forma_prevista TEXT'); } catch (e) { /* ja existe */ }
+  try { db.run('ALTER TABLE cp_contas ADD COLUMN pix_dados TEXT'); } catch (e) { /* ja existe */ }
 }
 
 /* ---------- dados iniciais ---------- */
@@ -858,6 +896,23 @@ function semear() {
      antes da NFC-e existir tinham acesso ao PDV sem a acao "Emitir NFC-e",
      e a venda saia sem nota ("Seu perfil nao tem permissao"). Roda uma vez.
      Tambem da ao Gerente o relatorio novo (Sugestao de Compra). */
+  /* [1.16] o Gerente passa a ver o modulo Obras (material do dono). Roda uma vez. */
+  const ajuste16 = one("SELECT valor FROM config WHERE chave = 'perfis_ajuste_1_16'");
+  if (!ajuste16 || txt(ajuste16.valor) !== '1') {
+    let n = 0;
+    all('SELECT id, nome, permissoes FROM perfis').forEach((p) => {
+      let perm; try { perm = JSON.parse(p.permissoes) || {}; } catch (e) { return; }
+      if (perm.todos === true || perm.obras === true) return;
+      if (txt(p.nome).toUpperCase() === 'GERENTE') {
+        perm.obras = true;
+        run('UPDATE perfis SET permissoes = ? WHERE id = ?', [JSON.stringify(perm), p.id]);
+        n++;
+      }
+    });
+    run("INSERT OR REPLACE INTO config (chave, valor) VALUES ('perfis_ajuste_1_16', '1')");
+    if (n) console.log(`Perfis ajustados: ${n} ganharam o modulo Obras.`);
+  }
+
   const ajuste13 = one("SELECT valor FROM config WHERE chave = 'perfis_ajuste_1_13'");
   if (!ajuste13 || txt(ajuste13.valor) !== '1') {
     let n = 0;
@@ -1193,6 +1248,7 @@ const MODULOS = [
   { chave: 'caixa', nome: 'Caixa', grupo: 'Operação' },
   { chave: 'entradaNota', nome: 'Entrada de Nota (compra)', grupo: 'Operação' },
   { chave: 'expedicao', nome: 'Expedição / Entregas', grupo: 'Operação' },
+  { chave: 'obras', nome: 'Obras (material do dono)', grupo: 'Operação' },
 
   { chave: 'receber', nome: 'Contas a Receber', grupo: 'Financeiro' },
   { chave: 'cartao', nome: 'Recebíveis de Cartão', grupo: 'Financeiro' },
@@ -1327,6 +1383,8 @@ const REGRAS_PERMISSAO = [
   { re: /^\/entrada-nota/, p: 'entradaNota' },
   /* [1.13] expedicao confirma entregas; o caixa tambem pode (cliente que volta para buscar) */
   { re: /^\/entregas/, p: ['expedicao', 'pdv'] },
+  /* [1.16] obras: material do dono, saldo e pagamentos */
+  { re: /^\/obras/, p: 'obras' },
   /* [1.12] consulta a tabela NCM: quem cadastra produto, da entrada em nota ou cuida da NFC-e */
   { re: /^\/ncm/, p: ['produtos', 'entradaNota', 'fiscal'] },
   { re: /^\/produtos\/ncm\/resumo/, p: ['produtos', 'fiscal'] },
@@ -5212,10 +5270,13 @@ app.get('/api/cp/contas', auth, (req, res) => {
     FROM cp_contas c LEFT JOIN cp_categorias cat ON cat.id = c.categoria_id
     ${where} ORDER BY c.vencimento, c.fornecedor LIMIT 3000`, params);
 
+  // [1.16] marca quais contas tem boleto anexado (sem trazer o arquivo)
+  const comBoleto = new Set(all('SELECT conta_id FROM cp_anexos').map((a) => a.conta_id));
   lista.forEach((c) => {
     c.status = situacaoConta(c);
     c.saldo = round2(num(c.valor) - num(c.valor_pago));
     c.dias = Math.floor((new Date(hoje()) - new Date(c.vencimento)) / 86400000);
+    c.tem_boleto = comBoleto.has(c.id) ? 1 : 0;
   });
 
   const st = txt(req.query.situacao);
@@ -5252,6 +5313,11 @@ app.post('/api/cp/contas', auth, (req, res) => {
     if (f) fornecedorNome = f.nome;
   }
 
+  // [1.16] como pretende pagar (boleto/pix/outro) e, no PIX, os dados para pagar
+  const formaPrevista = ['BOLETO', 'PIX', 'OUTRO'].includes(txt(b.forma_prevista).toUpperCase())
+    ? txt(b.forma_prevista).toUpperCase() : '';
+  const pixDados = formaPrevista === 'PIX' ? txt(b.pix_dados) : '';
+
   /* ---- edicao de uma parcela existente ---- */
   if (b.id) {
     const atual = one('SELECT * FROM cp_contas WHERE id = ?', [b.id]);
@@ -5260,10 +5326,10 @@ app.post('/api/cp/contas', auth, (req, res) => {
       return res.status(400).json({ erro: 'Conta ja paga. Estorne o pagamento antes de editar.' });
     }
     run(`UPDATE cp_contas SET fornecedor_id=?, fornecedor=?, categoria_id=?, documento=?,
-         descricao=?, emissao=?, vencimento=?, valor=?, observacao=? WHERE id=?`,
+         descricao=?, emissao=?, vencimento=?, valor=?, observacao=?, forma_prevista=?, pix_dados=? WHERE id=?`,
       [b.fornecedor_id || null, fornecedorNome, b.categoria_id || null, txt(b.documento),
        txt(b.descricao), txt(b.emissao) || hoje(), txt(b.vencimento).slice(0, 10),
-       valorTotal, txt(b.observacao), b.id]);
+       valorTotal, txt(b.observacao), formaPrevista, pixDados, b.id]);
     salvarBanco();
     registrarLog(req.usuario.usuario, 'cp-editar', `#${b.id} ${fornecedorNome} ${valorTotal}`);
     return res.json({ ok: true, id: b.id });
@@ -5287,11 +5353,11 @@ app.post('/api/cp/contas', auth, (req, res) => {
 
     run(`INSERT INTO cp_contas (fornecedor_id, fornecedor, categoria_id, documento, descricao,
            emissao, vencimento, valor, parcela, total_parcelas, grupo, observacao,
-           situacao, usuario, criado_em)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'aberto', ?, ?)`,
+           forma_prevista, pix_dados, situacao, usuario, criado_em)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'aberto', ?, ?)`,
       [b.fornecedor_id || null, fornecedorNome, b.categoria_id || null, doc, txt(b.descricao),
        emissao, venc, valorParcela, i, n, grupo, txt(b.observacao),
-       req.usuario.usuario, agora()]);
+       formaPrevista, pixDados, req.usuario.usuario, agora()]);
     ids.push(ultimoId());
   }
 
@@ -5376,17 +5442,62 @@ app.delete('/api/cp/contas/:id', auth, (req, res) => {
     if (pagas && pagas.n) {
       return res.status(400).json({ erro: 'Ha parcelas ja pagas nesse parcelamento. Estorne antes.' });
     }
-    const qtd = one('SELECT COUNT(*) AS n FROM cp_contas WHERE grupo = ?', [c.grupo]);
+    const idsGrupo = all('SELECT id FROM cp_contas WHERE grupo = ?', [c.grupo]).map((x) => x.id);
+    const qtd = idsGrupo.length;
     run('DELETE FROM cp_contas WHERE grupo = ?', [c.grupo]);
+    idsGrupo.forEach((id) => run('DELETE FROM cp_anexos WHERE conta_id = ?', [id]));  // [1.16]
     salvarBanco();
     registrarLog(req.usuario.usuario, 'cp-excluir-grupo', `${c.fornecedor} ${c.documento}`);
-    return res.json({ ok: true, excluidas: qtd ? qtd.n : 1 });
+    return res.json({ ok: true, excluidas: qtd || 1 });
   }
 
   run('DELETE FROM cp_contas WHERE id = ?', [c.id]);
+  run('DELETE FROM cp_anexos WHERE conta_id = ?', [c.id]);   // [1.16] tira o boleto junto
   salvarBanco();
   registrarLog(req.usuario.usuario, 'cp-excluir', `${c.fornecedor} ${c.documento}`);
   res.json({ ok: true, excluidas: 1 });
+});
+
+/* ---------- [1.16] boleto anexado a uma conta a pagar ---------- */
+const TIPOS_BOLETO = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+
+app.post('/api/cp/contas/:id/boleto', auth, (req, res) => {
+  const c = one('SELECT id, fornecedor, documento FROM cp_contas WHERE id = ?', [req.params.id]);
+  if (!c) return res.status(404).json({ erro: 'Conta nao encontrada.' });
+  const tipo = txt(req.body.tipo);
+  const nome = txt(req.body.nome) || 'boleto';
+  const dados = txt(req.body.dados);   // base64 (sem o prefixo data:)
+  if (!dados) return res.status(400).json({ erro: 'Nenhum arquivo recebido.' });
+  if (!TIPOS_BOLETO[tipo]) return res.status(400).json({ erro: 'Anexe um PDF ou uma imagem (JPG, PNG).' });
+  // ~4 MB de arquivo = ~5,6 MB em base64
+  if (dados.length > 5.6 * 1024 * 1024) return res.status(400).json({ erro: 'O arquivo e grande demais (limite de 4 MB).' });
+
+  run(`INSERT INTO cp_anexos (conta_id, nome, tipo, dados, enviado_em, usuario)
+       VALUES (?,?,?,?,?,?)
+       ON CONFLICT(conta_id) DO UPDATE SET nome=excluded.nome, tipo=excluded.tipo,
+         dados=excluded.dados, enviado_em=excluded.enviado_em, usuario=excluded.usuario`,
+    [c.id, nome, tipo, dados, agora(), req.usuario.usuario]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'cp-boleto', `#${c.id} ${c.fornecedor} ${c.documento}`);
+  res.json({ ok: true });
+});
+
+app.get('/api/cp/contas/:id/boleto', auth, (req, res) => {
+  const a = one('SELECT * FROM cp_anexos WHERE conta_id = ?', [req.params.id]);
+  if (!a) return res.status(404).json({ erro: 'Essa conta nao tem boleto anexado.' });
+  const ext = TIPOS_BOLETO[a.tipo] || 'bin';
+  const buf = Buffer.from(txt(a.dados), 'base64');
+  res.setHeader('Content-Type', a.tipo);
+  const inline = txt(req.query.inline) === '1';
+  res.setHeader('Content-Disposition',
+    `${inline ? 'inline' : 'attachment'}; filename="boleto-conta-${req.params.id}.${ext}"`);
+  res.send(buf);
+});
+
+app.delete('/api/cp/contas/:id/boleto', auth, (req, res) => {
+  run('DELETE FROM cp_anexos WHERE conta_id = ?', [req.params.id]);
+  salvarBanco();
+  res.json({ ok: true });
 });
 
 app.get('/api/cp/resumo', auth, (req, res) => {
@@ -5429,6 +5540,234 @@ app.get('/api/cp/resumo', auth, (req, res) => {
     por_mes: porMes.map((m) => ({ ...m, total: round2(m.total), aberto: round2(m.aberto) })),
     total_geral: round2(geral)
   });
+});
+
+/* =========================================================================
+   [1.16] OBRAS — material (a preco de custo) que sai para as obras do dono.
+   Nao e venda fiscal, nao passa pelo caixa; o estoque baixa na saida.
+   Cada obra acumula um saldo (retirado - pago) que o dono acerta com a loja.
+   ========================================================================= */
+
+function obraResumo(obraId) {
+  const r = one('SELECT COALESCE(SUM(total),0) AS t FROM obra_saidas WHERE obra_id = ?', [obraId]);
+  const p = one('SELECT COALESCE(SUM(valor),0) AS t FROM obra_pagamentos WHERE obra_id = ?', [obraId]);
+  const retirado = round2(r ? r.t : 0);
+  const pago = round2(p ? p.t : 0);
+  return { retirado, pago, saldo: round2(retirado - pago) };
+}
+
+app.get('/api/obras', auth, (req, res) => {
+  const st = txt(req.query.status);
+  let obras = all('SELECT * FROM obras ORDER BY status, nome').map((o) => ({ ...o, ...obraResumo(o.id) }));
+  if (st === 'andamento' || st === 'concluida') obras = obras.filter((o) => o.status === st);
+  res.json({
+    obras,
+    totais: {
+      retirado: round2(obras.reduce((s, o) => s + o.retirado, 0)),
+      pago: round2(obras.reduce((s, o) => s + o.pago, 0)),
+      saldo: round2(obras.reduce((s, o) => s + o.saldo, 0)),
+      qtd: obras.length
+    }
+  });
+});
+
+app.post('/api/obras', auth, (req, res) => {
+  const b = req.body;
+  if (!txt(b.nome)) return res.status(400).json({ erro: 'Informe o nome da obra.' });
+  const status = txt(b.status) === 'concluida' ? 'concluida' : 'andamento';
+  if (b.id) {
+    const o = one('SELECT id FROM obras WHERE id = ?', [b.id]);
+    if (!o) return res.status(404).json({ erro: 'Obra nao encontrada.' });
+    run(`UPDATE obras SET nome=?, responsavel=?, endereco=?, telefone=?, observacao=?, status=? WHERE id=?`,
+      [txt(b.nome), txt(b.responsavel), txt(b.endereco), txt(b.telefone), txt(b.observacao), status, b.id]);
+    salvarBanco();
+    registrarLog(req.usuario.usuario, 'obra-editar', txt(b.nome));
+    return res.json({ ok: true, id: b.id });
+  }
+  const id = inserir(`INSERT INTO obras (nome, responsavel, endereco, telefone, observacao, status, criado_em, usuario)
+       VALUES (?,?,?,?,?,?,?,?)`,
+    [txt(b.nome), txt(b.responsavel), txt(b.endereco), txt(b.telefone), txt(b.observacao), status, agora(), req.usuario.usuario]);
+  registrarLog(req.usuario.usuario, 'obra-nova', txt(b.nome));
+  res.json({ ok: true, id });
+});
+
+/* estornos (rotas com dois segmentos: declaradas antes de /obras/:id) */
+app.delete('/api/obras/saida/:id', auth, (req, res) => {
+  const s = one('SELECT * FROM obra_saidas WHERE id = ?', [req.params.id]);
+  if (!s) return res.status(404).json({ erro: 'Saida nao encontrada.' });
+  const itens = all('SELECT * FROM obra_saida_itens WHERE saida_id = ?', [s.id]);
+  itens.forEach((it) => {
+    if (it.produto_id) {
+      lancarEstoque(it.produto_id, 'entrada', it.quantidade, it.custo_unit,
+        `OBRA #${s.obra_id} CANC`, 'Estorno de saida para obra', req.usuario.usuario, false);
+    }
+  });
+  run('DELETE FROM obra_saida_itens WHERE saida_id = ?', [s.id]);
+  run('DELETE FROM obra_saidas WHERE id = ?', [s.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'obra-saida-estorno', `saida #${s.id} obra #${s.obra_id} (devolveu ${itens.length} item ao estoque)`);
+  res.json({ ok: true, itens: itens.length });
+});
+
+app.delete('/api/obras/pagamento/:id', auth, (req, res) => {
+  const p = one('SELECT * FROM obra_pagamentos WHERE id = ?', [req.params.id]);
+  if (!p) return res.status(404).json({ erro: 'Pagamento nao encontrado.' });
+  run('DELETE FROM obra_pagamentos WHERE id = ?', [p.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'obra-pagto-estorno', `pagamento #${p.id} obra #${p.obra_id}`);
+  res.json({ ok: true });
+});
+
+app.post('/api/obras/:id/saida', auth, (req, res) => {
+  const obra = one('SELECT * FROM obras WHERE id = ?', [req.params.id]);
+  if (!obra) return res.status(404).json({ erro: 'Obra nao encontrada.' });
+  const b = req.body;
+  const itens = Array.isArray(b.itens) ? b.itens : [];
+  if (!itens.length) return res.status(400).json({ erro: 'Adicione ao menos um material.' });
+  const cfg = lerConfig();
+
+  const preparados = [];
+  for (const it of itens) {
+    const p = one('SELECT * FROM produtos WHERE id = ?', [it.produto_id]);
+    if (!p) return res.status(400).json({ erro: `Produto #${it.produto_id} nao existe mais.` });
+    const qtd = round2(it.quantidade);
+    if (qtd <= 0) return res.status(400).json({ erro: `Quantidade invalida em ${p.descricao}.` });
+    if (!p.fracionado && Math.abs(qtd - Math.round(qtd)) > 0.0001) {
+      return res.status(400).json({ erro: `${p.descricao} nao pode sair fracionado.` });
+    }
+    const reservado = reservadoDoProduto(p.id);
+    const disp = round2(num(p.estoque) - reservado);
+    if (cfg.venda_permite_estoque_negativo !== '1' && qtd > disp) {
+      return res.status(400).json({
+        erro: `Estoque insuficiente de ${p.descricao}. Disponivel: ${disp} ${p.unidade}` +
+              (reservado ? ` (${num(p.estoque)} no estoque, ${reservado} reservados para entregas).` : '.') });
+    }
+    // sai a preco de CUSTO (o padrao); o custo pode ser ajustado item a item
+    const custo = round2(num(it.custo_unit !== undefined && it.custo_unit !== '' ? it.custo_unit : p.preco_custo));
+    preparados.push({ p, qtd, custo, total: round2(qtd * custo) });
+  }
+
+  const total = round2(preparados.reduce((s, i) => s + i.total, 0));
+  const data = txt(b.data).slice(0, 10) || hoje();
+  const saidaId = inserir(`INSERT INTO obra_saidas (obra_id, data, observacao, total, usuario, criado_em)
+       VALUES (?,?,?,?,?,?)`,
+    [obra.id, data, txt(b.observacao), total, req.usuario.usuario, agora()], false);
+
+  preparados.forEach((i) => {
+    run(`INSERT INTO obra_saida_itens (saida_id, produto_id, codigo, descricao, unidade, quantidade, custo_unit, total)
+         VALUES (?,?,?,?,?,?,?,?)`,
+      [saidaId, i.p.id, i.p.codigo, i.p.descricao, i.p.unidade, i.qtd, i.custo, i.total]);
+    lancarEstoque(i.p.id, 'saida', i.qtd, i.custo, `OBRA #${obra.id}`,
+      `Saida para obra: ${obra.nome}`, req.usuario.usuario, false);
+  });
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'obra-saida',
+    `obra #${obra.id} ${obra.nome} R$ ${total.toFixed(2)} (${preparados.length} item)`);
+  res.json({ ok: true, id: saidaId, total });
+});
+
+app.post('/api/obras/:id/pagamento', auth, (req, res) => {
+  const obra = one('SELECT * FROM obras WHERE id = ?', [req.params.id]);
+  if (!obra) return res.status(404).json({ erro: 'Obra nao encontrada.' });
+  const valor = round2(req.body.valor);
+  if (valor <= 0) return res.status(400).json({ erro: 'Informe um valor maior que zero.' });
+  const forma = txt(req.body.forma).toUpperCase() || 'DINHEIRO';
+  const data = txt(req.body.data).slice(0, 10) || hoje();
+  const id = inserir(`INSERT INTO obra_pagamentos (obra_id, data, valor, forma, observacao, usuario, criado_em)
+       VALUES (?,?,?,?,?,?,?)`,
+    [obra.id, data, valor, forma, txt(req.body.observacao), req.usuario.usuario, agora()]);
+  registrarLog(req.usuario.usuario, 'obra-pagamento', `obra #${obra.id} ${obra.nome} R$ ${valor.toFixed(2)} ${forma}`);
+  res.json({ ok: true, id });
+});
+
+app.get('/api/obras/:id/extrato', auth, (req, res) => {
+  const obra = one('SELECT * FROM obras WHERE id = ?', [req.params.id]);
+  if (!obra) return res.status(404).send('Obra nao encontrada.');
+  const cfg = lerConfig();
+  const saidas = all('SELECT * FROM obra_saidas WHERE obra_id = ? ORDER BY data, id', [obra.id]);
+  saidas.forEach((s) => { s.itens = all('SELECT * FROM obra_saida_itens WHERE saida_id = ? ORDER BY id', [s.id]); });
+  const pagamentos = all('SELECT * FROM obra_pagamentos WHERE obra_id = ? ORDER BY data, id', [obra.id]);
+  const r = obraResumo(obra.id);
+  const brData = (iso) => { const s = txt(iso).slice(0, 10).split('-'); return s.length === 3 ? `${s[2]}/${s[1]}/${s[0]}` : txt(iso); };
+
+  const blocoSaidas = saidas.map((s) => `
+    <div class="bloco">
+      <div class="bl-cab">Saída de ${brData(s.data)} — total R$ ${brl(s.total)}${s.observacao ? ' · ' + escapeHtml(s.observacao) : ''}</div>
+      <table><thead><tr><th>Material</th><th class="c">Un.</th><th class="n">Qtd.</th><th class="n">Custo</th><th class="n">Total</th></tr></thead>
+      <tbody>${s.itens.map((i) => `<tr><td>${escapeHtml(i.descricao)}</td><td class="c">${escapeHtml(i.unidade)}</td>
+        <td class="n">${qtdFmt(i.quantidade)}</td><td class="n">${brl(i.custo_unit)}</td><td class="n">${brl(i.total)}</td></tr>`).join('')}</tbody></table>
+    </div>`).join('') || '<p>Nenhuma saída registrada.</p>';
+
+  const blocoPag = pagamentos.length ? `
+    <table><thead><tr><th>Data</th><th>Forma</th><th>Observação</th><th class="n">Valor</th></tr></thead>
+    <tbody>${pagamentos.map((p) => `<tr><td>${brData(p.data)}</td><td>${escapeHtml(p.forma)}</td>
+      <td>${escapeHtml(p.observacao)}</td><td class="n">${brl(p.valor)}</td></tr>`).join('')}</tbody></table>` : '<p>Nenhum pagamento registrado.</p>';
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html><html lang="pt-br"><head><meta charset="utf-8">
+<title>Extrato da obra — ${escapeHtml(obra.nome)}</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:18px}
+  h1{font-size:20px;margin:0 0 2px} .sub{color:#555;font-size:13px;margin-bottom:12px}
+  .resumo{display:flex;gap:10px;margin:12px 0}
+  .resumo div{flex:1;border:1px solid #ccc;border-radius:8px;padding:8px 10px}
+  .resumo .rot{font-size:11px;color:#555;text-transform:uppercase}
+  .resumo .val{font-size:18px;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 14px}
+  th,td{border-bottom:1px solid #e3e3e3;padding:5px 7px;text-align:left}
+  th{background:#f3f3f3} .n{text-align:right} .c{text-align:center}
+  .bloco{margin-bottom:12px} .bl-cab{font-weight:700;font-size:13px;margin:10px 0 2px}
+  h2{font-size:15px;border-bottom:2px solid #111;padding-bottom:3px;margin-top:20px}
+  .saldo{font-size:17px;font-weight:700;text-align:right;margin-top:6px}
+  .noprint{margin-top:18px} @media print{.noprint{display:none}}
+</style></head><body>
+<h1>${escapeHtml(cfg.loja_fantasia || cfg.loja_nome || 'Loja')}</h1>
+<div class="sub">Extrato de materiais — Obra: <strong>${escapeHtml(obra.nome)}</strong>
+${obra.responsavel ? ' · Responsável: ' + escapeHtml(obra.responsavel) : ''}
+${obra.endereco ? ' · ' + escapeHtml(obra.endereco) : ''}<br>Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+<div class="resumo">
+  <div><div class="rot">Retirado (custo)</div><div class="val">R$ ${brl(r.retirado)}</div></div>
+  <div><div class="rot">Pago</div><div class="val">R$ ${brl(r.pago)}</div></div>
+  <div><div class="rot">Saldo a pagar</div><div class="val">R$ ${brl(r.saldo)}</div></div>
+</div>
+<h2>Materiais retirados</h2>
+${blocoSaidas}
+<h2>Pagamentos</h2>
+${blocoPag}
+<div class="saldo">Saldo a pagar: R$ ${brl(r.saldo)}</div>
+<div class="noprint"><button onclick="window.print()">Imprimir</button></div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print()},350)})</script>
+</body></html>`);
+});
+
+app.get('/api/obras/:id', auth, (req, res) => {
+  const obra = one('SELECT * FROM obras WHERE id = ?', [req.params.id]);
+  if (!obra) return res.status(404).json({ erro: 'Obra nao encontrada.' });
+  const saidas = all('SELECT * FROM obra_saidas WHERE obra_id = ? ORDER BY data DESC, id DESC', [obra.id]);
+  saidas.forEach((s) => { s.itens = all('SELECT * FROM obra_saida_itens WHERE saida_id = ? ORDER BY id', [s.id]); });
+  const pagamentos = all('SELECT * FROM obra_pagamentos WHERE obra_id = ? ORDER BY data DESC, id DESC', [obra.id]);
+  const porProduto = all(`SELECT i.descricao, i.unidade, SUM(i.quantidade) AS quantidade, SUM(i.total) AS total
+    FROM obra_saida_itens i JOIN obra_saidas s ON s.id = i.saida_id
+    WHERE s.obra_id = ? GROUP BY i.produto_id, i.descricao, i.unidade ORDER BY total DESC`, [obra.id]);
+  res.json({
+    obra, resumo: obraResumo(obra.id), saidas, pagamentos,
+    por_produto: porProduto.map((p) => ({ ...p, quantidade: round2(p.quantidade), total: round2(p.total) }))
+  });
+});
+
+app.delete('/api/obras/:id', auth, (req, res) => {
+  const obra = one('SELECT * FROM obras WHERE id = ?', [req.params.id]);
+  if (!obra) return res.status(404).json({ erro: 'Obra nao encontrada.' });
+  const s = one('SELECT COUNT(*) AS n FROM obra_saidas WHERE obra_id = ?', [obra.id]);
+  const p = one('SELECT COUNT(*) AS n FROM obra_pagamentos WHERE obra_id = ?', [obra.id]);
+  if ((s && s.n) || (p && p.n)) {
+    return res.status(400).json({
+      erro: 'Essa obra tem saidas ou pagamentos. Marque como concluida em vez de excluir (ou estorne tudo antes).' });
+  }
+  run('DELETE FROM obras WHERE id = ?', [obra.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'obra-excluir', obra.nome);
+  res.json({ ok: true });
 });
 
 /* =========================================================================
