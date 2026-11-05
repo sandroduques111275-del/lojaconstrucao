@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.16 - Obras (material do dono) e boleto/PIX nas contas';
+const VERSAO = '1.20 - Pagar conta sem o campo Forma (mais simples)';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -758,6 +758,8 @@ function criarEstrutura() {
   // [1.16] contas a pagar: forma prevista (boleto/pix) e os dados do PIX
   try { db.run('ALTER TABLE cp_contas ADD COLUMN forma_prevista TEXT'); } catch (e) { /* ja existe */ }
   try { db.run('ALTER TABLE cp_contas ADD COLUMN pix_dados TEXT'); } catch (e) { /* ja existe */ }
+  // [1.17] codigo de barras / linha digitavel do boleto
+  try { db.run('ALTER TABLE cp_contas ADD COLUMN boleto_linha TEXT'); } catch (e) { /* ja existe */ }
 }
 
 /* ---------- dados iniciais ---------- */
@@ -4822,6 +4824,79 @@ function sugestaoCompra(q) {
   };
 }
 
+/* [1.19] RESUMO DO DIA — tudo que foi vendido no dia (caixa + saidas para
+   obras), por produto. O material que saiu para as obras conta como venda do
+   dia pelo valor que o dono paga (o custo da saida). */
+app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
+  const dia = txt(req.query.dia) || hoje();
+  const ateDia = dia + 'T23:59:59';
+
+  // produtos vendidos no caixa (vendas finalizadas do dia) — a preco de venda
+  const itensVenda = all(`
+    SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
+           SUM(i.quantidade) AS qtd, SUM(i.total) AS total, SUM(i.custo * i.quantidade) AS custo
+    FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
+    WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [dia, ateDia]);
+
+  const totVendas = one(`SELECT COUNT(*) AS cupons, COALESCE(SUM(total),0) AS total,
+           COALESCE(SUM(desconto),0) AS desconto
+    FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?`, [dia, ateDia]);
+
+  const pagamentos = all(`SELECT p.forma, COALESCE(SUM(p.valor),0) AS valor, COUNT(*) AS qtd
+    FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
+    WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
+    GROUP BY p.forma ORDER BY valor DESC`, [dia, ateDia]);
+
+  // material que saiu para as obras no dia — valor = custo (o que o dono paga)
+  const itensObra = all(`
+    SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
+           SUM(i.quantidade) AS qtd, SUM(i.total) AS total
+    FROM obra_saida_itens i JOIN obra_saidas s ON s.id = i.saida_id
+    WHERE s.data = ?
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [dia]);
+  const obrasPorNome = all(`SELECT o.nome, COALESCE(SUM(s.total),0) AS total, COUNT(*) AS saidas
+    FROM obra_saidas s JOIN obras o ON o.id = s.obra_id WHERE s.data = ?
+    GROUP BY o.nome ORDER BY total DESC`, [dia]);
+
+  // junta os produtos das duas origens
+  const mapa = new Map();
+  const add = (it, origem) => {
+    const key = it.produto_id || ('x:' + it.descricao);
+    const e = mapa.get(key) || {
+      codigo: it.codigo, descricao: it.descricao, unidade: it.unidade,
+      qtd: 0, valor: 0, qtd_caixa: 0, valor_caixa: 0, qtd_obra: 0, valor_obra: 0
+    };
+    e.qtd = round2(e.qtd + num(it.qtd));
+    e.valor = round2(e.valor + num(it.total));
+    if (origem === 'caixa') { e.qtd_caixa = round2(e.qtd_caixa + num(it.qtd)); e.valor_caixa = round2(e.valor_caixa + num(it.total)); }
+    else { e.qtd_obra = round2(e.qtd_obra + num(it.qtd)); e.valor_obra = round2(e.valor_obra + num(it.total)); }
+    mapa.set(key, e);
+  };
+  itensVenda.forEach((i) => add(i, 'caixa'));
+  itensObra.forEach((i) => add(i, 'obra'));
+  const produtos = [...mapa.values()].sort((a, b) => b.valor - a.valor);
+
+  const caixaTotal = round2(totVendas ? totVendas.total : 0);
+  const caixaCusto = round2(itensVenda.reduce((s, i) => s + num(i.custo), 0));
+  const obrasTotal = round2(itensObra.reduce((s, i) => s + num(i.total), 0));
+
+  res.json({
+    dia,
+    caixa: {
+      total: caixaTotal, custo: caixaCusto, lucro: round2(caixaTotal - caixaCusto),
+      cupons: totVendas ? totVendas.cupons : 0, desconto: round2(totVendas ? totVendas.desconto : 0)
+    },
+    obras: { total: obrasTotal, saidas: obrasPorNome.reduce((s, o) => s + num(o.saidas), 0) },
+    total_dia: round2(caixaTotal + obrasTotal),
+    itens_qtd: round2(produtos.reduce((s, i) => s + i.qtd, 0)),
+    linhas_qtd: produtos.length,
+    pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor: round2(p.valor), qtd: p.qtd })),
+    obras_detalhe: obrasPorNome.map((o) => ({ nome: o.nome, total: round2(o.total), saidas: o.saidas })),
+    produtos
+  });
+});
+
 app.get('/api/relatorios/sugestao-compra', auth, (req, res) => {
   res.json(sugestaoCompra(req.query));
 });
@@ -5317,6 +5392,8 @@ app.post('/api/cp/contas', auth, (req, res) => {
   const formaPrevista = ['BOLETO', 'PIX', 'OUTRO'].includes(txt(b.forma_prevista).toUpperCase())
     ? txt(b.forma_prevista).toUpperCase() : '';
   const pixDados = formaPrevista === 'PIX' ? txt(b.pix_dados) : '';
+  // [1.17] a linha digitavel/codigo de barras do boleto (so quando for boleto)
+  const boletoLinha = formaPrevista === 'BOLETO' ? txt(b.boleto_linha) : '';
 
   /* ---- edicao de uma parcela existente ---- */
   if (b.id) {
@@ -5326,10 +5403,10 @@ app.post('/api/cp/contas', auth, (req, res) => {
       return res.status(400).json({ erro: 'Conta ja paga. Estorne o pagamento antes de editar.' });
     }
     run(`UPDATE cp_contas SET fornecedor_id=?, fornecedor=?, categoria_id=?, documento=?,
-         descricao=?, emissao=?, vencimento=?, valor=?, observacao=?, forma_prevista=?, pix_dados=? WHERE id=?`,
+         descricao=?, emissao=?, vencimento=?, valor=?, observacao=?, forma_prevista=?, pix_dados=?, boleto_linha=? WHERE id=?`,
       [b.fornecedor_id || null, fornecedorNome, b.categoria_id || null, txt(b.documento),
        txt(b.descricao), txt(b.emissao) || hoje(), txt(b.vencimento).slice(0, 10),
-       valorTotal, txt(b.observacao), formaPrevista, pixDados, b.id]);
+       valorTotal, txt(b.observacao), formaPrevista, pixDados, boletoLinha, b.id]);
     salvarBanco();
     registrarLog(req.usuario.usuario, 'cp-editar', `#${b.id} ${fornecedorNome} ${valorTotal}`);
     return res.json({ ok: true, id: b.id });
@@ -5353,11 +5430,12 @@ app.post('/api/cp/contas', auth, (req, res) => {
 
     run(`INSERT INTO cp_contas (fornecedor_id, fornecedor, categoria_id, documento, descricao,
            emissao, vencimento, valor, parcela, total_parcelas, grupo, observacao,
-           forma_prevista, pix_dados, situacao, usuario, criado_em)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'aberto', ?, ?)`,
+           forma_prevista, pix_dados, boleto_linha, situacao, usuario, criado_em)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, 'aberto', ?, ?)`,
       [b.fornecedor_id || null, fornecedorNome, b.categoria_id || null, doc, txt(b.descricao),
        emissao, venc, valorParcela, i, n, grupo, txt(b.observacao),
-       formaPrevista, pixDados, req.usuario.usuario, agora()]);
+       // cada parcela tem um boleto com codigo diferente: no parcelamento nao repete
+       formaPrevista, pixDados, (n === 1 ? boletoLinha : ''), req.usuario.usuario, agora()]);
     ids.push(ultimoId());
   }
 

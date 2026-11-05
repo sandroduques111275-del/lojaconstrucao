@@ -118,6 +118,30 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 💸 Pagar conta mais simples (1.20)
+
+Na tela **Pagar conta** (Contas a Pagar) o campo **Forma** saiu. Ficam
+Juros/Multa, Desconto, Valor a pagar e Observação. A opção **"Paguei em
+dinheiro — tirar do caixa (lança uma sangria)"** continua, agora **desmarcada
+por padrão**: marque só quando o dinheiro saiu da gaveta do caixa, e aí a
+sangria é lançada como antes.
+
+### 🧾 Vendas do Dia (1.19)
+
+Menu **Relatórios → Vendas do Dia**. Um resumo de tudo que saiu num dia só,
+começando em **hoje** (tem botão **Hoje / Ontem** e escolher a data).
+
+- Cartões no topo: **Vendido no dia** (caixa + obras), **Caixa**, **Obras** e
+  **Itens**.
+- Tabela **Produtos que saíram no dia**: cada produto com a quantidade e o
+  valor, somando o que saiu no **caixa** e o que saiu para as **obras** (os de
+  obra levam o 🏗️ e a coluna **Qtd. obra**). Vem ordenado do que mais vendeu
+  para o que menos vendeu.
+- **Como foi pago** (dinheiro, PIX, cartão…) e as **Saídas para obras**.
+- Botão **Imprimir**.
+- As **saídas para obras entram no total do dia pelo valor de custo** (o que o
+  dono paga à loja), então o "vendido no dia" já conta o que foi para as obras.
+
 ### 🏗️ Obras do dono (1.16)
 
 Menu **Operação → Obras**. Controla o material que sai da loja para as obras do
@@ -134,12 +158,18 @@ dono e quanto ele deve acertar com a loja.
 - Acesso: Administrador e Gerente (liberável a outros perfis em *Configurações →
   Perfis → Obras*).
 
-### 💳 Contas a Pagar: boleto e PIX (1.16)
+### 💳 Contas a Pagar: boleto e PIX (1.16 / 1.17)
 
 - Ao lançar/editar uma conta, escolha **como vai pagar**: **Boleto** (anexa o PDF
   ou foto — fica guardado no sistema e vai no backup; um 📎 na lista e um botão na
   tela de pagar abrem o boleto) ou **PIX** (guarda os dados do PIX, que aparecem
   com botão **Copiar** na hora de pagar; a conta ganha a etiqueta 🔑 PIX).
+- **(1.17)** no Boleto, um campo para digitar/colar o **código de barras (linha
+  digitável)**; na hora de pagar ele aparece com botão **Copiar**, para pagar
+  pelo app do banco sem abrir o PDF.
+- **(1.18)** botão **Duplicar** (⧉) em cada conta: abre o "Lançar conta" já
+  preenchido com os dados dela (vencimento no mês seguinte) para repetir contas
+  que voltam todo mês; salva como conta nova.
 
 ### 📱 Contas a Pagar e celular (1.15)
 
