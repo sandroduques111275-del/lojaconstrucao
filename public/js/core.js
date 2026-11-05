@@ -229,7 +229,7 @@ async function sair() {
 
 /* ---------------- navegação ---------------- */
 /* telas que nao sao modulo proprio: valem pela permissao de outro modulo */
-const SECAO_PERMISSAO = { ncm: 'produtos' };
+const SECAO_PERMISSAO = { ncm: 'produtos', relDia: 'relVendas' };
 
 function irPara(secao) {
   if (!podeVer(SECAO_PERMISSAO[secao] || secao)) {
@@ -264,6 +264,7 @@ function irPara(secao) {
     estoque: carregarEstoque,
     clientes: carregarClientes,
     fornecedores: carregarFornecedores,
+    relDia: carregarVendasDia,
     relVendas: carregarRelVendas,
     relProdutos: carregarRelProdutos,
     relClientes: carregarRelClientes,

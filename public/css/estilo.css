@@ -200,23 +200,6 @@ tbody tr.cancelada td { text-decoration: line-through; color: var(--texto-fraco)
 .centro { text-align: center; }
 tfoot td { padding: 9px 10px; font-weight: 700; background: #f5f7fa; border-top: 2px solid var(--cinza-linha); }
 
-/* [1.15] cabecalho de coluna que ordena ao clicar */
-thead th.ord { cursor: pointer; user-select: none; }
-thead th.ord:hover { color: var(--azul); background: #eef2f7; }
-thead th.ord .seta { opacity: .35; font-size: 10px; margin-left: 2px; }
-thead th.ord.ativa { color: var(--azul); }
-thead th.ord.ativa .seta { opacity: 1; }
-
-/* [1.15] linha de grupo (agrupar por fornecedor) */
-tbody tr.grupo-forn td {
-  background: #eef2f7; color: var(--azul);
-  border-top: 2px solid var(--cinza-linha); border-bottom: 1px solid var(--cinza-linha);
-  cursor: pointer;
-}
-tbody tr.grupo-forn:hover td { background: #e5ebf2; }
-.grupo-linha { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
-.grupo-linha .grupo-tot { font-weight: 600; }
-
 .pill {
   display: inline-block; padding: 2px 8px; border-radius: 10px;
   font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
@@ -379,72 +362,8 @@ tbody tr.grupo-forn:hover td { background: #e5ebf2; }
   .conteudo { padding: 14px 12px 60px; }
   #pdvCodigo { min-width: 100%; }
   .topo .info .nome-empresa { display: none; }
-  /* [1.15] topo cabe no celular: encolhe a marca, trunca o nome da loja,
-     esconde a versão e aperta o usuário — sem estourar a largura */
-  .topo { gap: 8px; padding: 0 10px; }
-  .topo .marca { font-size: 14px; min-width: 0; flex: 1; overflow: hidden; }
-  .topo .marca #topoFantasia { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
-  .topo .marca #topoVersao { display: none; }
-  .topo .espaco { display: none; }
-  .topo .info { font-size: 11px; max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 @media (min-width: 821px) { #btnMenu { display: none; } }
-
-/* [1.15] CELULAR: toda tabela de listagem (.tabela-wrap) vira CARTOES empilhados,
-   um por linha, com o nome do campo (Fornecedor, Valor...) ao lado do valor.
-   O nome dos campos vem do data-label, que o core.js injeta a partir do
-   cabecalho. Nao afete o PDV nem tabelas fora de .tabela-wrap. */
-@media (max-width: 720px) {
-  .tabela-wrap { overflow-x: visible; border: 0; background: transparent; }
-  .tabela-wrap table { font-size: 13px; }
-  .tabela-wrap thead { display: none; }
-  .tabela-wrap tbody { display: block; }
-  .tabela-wrap tbody tr {
-    display: block; background: #fff; border: 1px solid var(--cinza-linha);
-    border-radius: var(--raio); margin-bottom: 10px; padding: 4px 12px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, .04);
-  }
-  .tabela-wrap tbody tr:hover { background: #fff; }
-  .tabela-wrap tbody tr.inativa { opacity: .6; }
-  .tabela-wrap tbody td {
-    display: flex; justify-content: space-between; align-items: center; gap: 14px;
-    text-align: right; padding: 7px 0; border-bottom: 1px dashed #eef1f5; white-space: normal;
-  }
-  .tabela-wrap tbody td:last-child { border-bottom: 0; }
-  .tabela-wrap tbody td::before {
-    content: attr(data-label); flex: 0 0 auto; text-align: left;
-    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px;
-    color: var(--texto-fraco);
-  }
-  /* celula sem rotulo (acoes): sem ::before, botoes a direita ocupando a linha */
-  .tabela-wrap tbody td:not([data-label])::before,
-  .tabela-wrap tbody td[data-label=""]::before { content: ""; }
-  .tabela-wrap tbody td.acoes, .tabela-wrap tbody td:last-child {
-    justify-content: flex-end; flex-wrap: wrap; gap: 6px; padding-top: 9px;
-  }
-  .tabela-wrap tbody td .btn, .tabela-wrap tbody td .btn-ic { margin: 0; }
-
-  /* linha de grupo (Contas a Pagar agrupado): faixa, nao cartao */
-  .tabela-wrap tbody tr.grupo-forn {
-    padding: 8px 12px; margin-bottom: 0; border-radius: 0; box-shadow: none; border: 0;
-  }
-  .tabela-wrap tbody tr.grupo-forn td { display: block; text-align: left; border: 0; padding: 0; }
-  .tabela-wrap tbody tr.grupo-forn td::before { content: ""; }
-
-  /* rodape de totais: um bloquinho */
-  .tabela-wrap tfoot { display: block; }
-  .tabela-wrap tfoot tr { display: block; background: #f5f7fa; border-radius: var(--raio); padding: 6px 12px; }
-  .tabela-wrap tfoot td { display: flex; justify-content: space-between; padding: 4px 0; border: 0; }
-  .tabela-wrap tfoot td:empty { display: none; }
-
-  /* cabecalhos de secao e cards de totais mais justos no celular */
-  .cabecalho-secao { flex-wrap: wrap; gap: 8px; }
-  .cabecalho-secao .acoes { width: 100%; }
-  .grid.g4, .grid.g2, .grid.g3 { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 420px) {
-  .grid.g4, .grid.g2, .grid.g3 { grid-template-columns: 1fr; }
-}
 
 @media print {
   .topo, .menu, .cabecalho-secao .acoes, .btn, .atalhos, #toasts { display: none !important; }
