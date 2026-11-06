@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.20 - Pagar conta sem o campo Forma (mais simples)';
+const VERSAO = '1.22 - Vendas do Dia mostra o vendedor';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4848,6 +4848,12 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
     WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
     GROUP BY p.forma ORDER BY valor DESC`, [dia, ateDia]);
 
+  // quanto cada vendedor vendeu no dia (caixa)
+  const vendedores = all(`SELECT COALESCE(NULLIF(TRIM(vendedor),''),'—') AS vendedor,
+           COUNT(*) AS cupons, COALESCE(SUM(total),0) AS total
+    FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?
+    GROUP BY COALESCE(NULLIF(TRIM(vendedor),''),'—') ORDER BY total DESC`, [dia, ateDia]);
+
   // material que saiu para as obras no dia — valor = custo (o que o dono paga)
   const itensObra = all(`
     SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
@@ -4892,6 +4898,7 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
     itens_qtd: round2(produtos.reduce((s, i) => s + i.qtd, 0)),
     linhas_qtd: produtos.length,
     pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor: round2(p.valor), qtd: p.qtd })),
+    vendedores: vendedores.map((v) => ({ vendedor: v.vendedor, cupons: v.cupons, total: round2(v.total) })),
     obras_detalhe: obrasPorNome.map((o) => ({ nome: o.nome, total: round2(o.total), saidas: o.saidas })),
     produtos
   });

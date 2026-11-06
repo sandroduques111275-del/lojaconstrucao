@@ -118,6 +118,21 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 👤 Vendas do Dia por vendedor (1.22)
+
+No relatório **Vendas do Dia** agora tem a seção **"Por vendedor (caixa)"**, ao
+lado de "Como foi pago": cada vendedor com o número de cupons e o total vendido
+no dia, do que mais vendeu para o que menos vendeu. O vendedor é o que estava na
+venda (quem registrou, ou o nome escolhido na Frente de Caixa).
+
+### 🔎 Clicar na conta mostra os dados para pagamento (1.21)
+
+Em **Contas a Pagar**, clique em cima de qualquer linha para abrir **"Dados para
+pagamento"**: o **código de barras do boleto** e os **dados do PIX** (cada um com
+botão **Copiar**), o botão **Ver boleto** (PDF/foto) e um botão **Pagar** que leva
+direto pra tela de pagamento. Os botões da linha (Pagar, ✏️, ⧉, 🗑️, 📎) continuam
+funcionando normalmente — clicar neles não abre essa janela.
+
 ### 💸 Pagar conta mais simples (1.20)
 
 Na tela **Pagar conta** (Contas a Pagar) o campo **Forma** saiu. Ficam
