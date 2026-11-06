@@ -53,6 +53,13 @@ async function carregarVendasDia() {
               || '<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse dia.</td></tr>'}</tbody>
           </table></div>
         </div>
+        <div class="card"><h3>👤 Por vendedor (caixa)</h3>
+          <div class="tabela-wrap"><table>
+            <thead><tr><th>Vendedor</th><th class="centro">Cupons</th><th class="num">Valor</th></tr></thead>
+            <tbody>${(d.vendedores || []).map((v) => `<tr><td><strong>${esc(v.vendedor)}</strong></td><td class="centro">${v.cupons}</td><td class="num"><strong>${N(v.total)}</strong></td></tr>`).join('')
+              || '<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse dia.</td></tr>'}</tbody>
+          </table></div>
+        </div>
         ${temObra ? `<div class="card"><h3>🏗️ Saídas para obras (a custo)</h3>
           <div class="tabela-wrap"><table>
             <thead><tr><th>Obra</th><th class="centro">Saídas</th><th class="num">Valor</th></tr></thead>

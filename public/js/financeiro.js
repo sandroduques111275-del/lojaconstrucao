@@ -123,9 +123,10 @@ function cpThead() {
 const CP_PILL = { pago: 'verde', vencido: 'vermelha', vence_hoje: 'amarela', aberto: 'azul' };
 const CP_ROT = { pago: 'pago', vencido: 'vencida', vence_hoje: 'vence hoje', aberto: 'em aberto' };
 
-/** Uma linha de conta (11 colunas). */
+/** Uma linha de conta (11 colunas). Clicar na linha abre os dados para pagamento. */
 function cpLinha(c) {
-  return `<tr>
+  const p = 'event.stopPropagation();';   // nos botões: não abrir os dados ao clicar neles
+  return `<tr class="cp-clicavel" style="cursor:pointer" onclick="verDadosPagamento(${c.id})" title="Clique para ver os dados de pagamento">
     <td style="white-space:nowrap;${c.status === 'vencido' ? 'color:var(--vermelho);font-weight:700' : ''}">${dataBr(c.vencimento)}</td>
     <td class="centro">${c.status === 'vencido' ? c.dias + ' d' : '—'}</td>
     <td><strong>${esc(c.fornecedor || '—')}</strong></td>
@@ -135,20 +136,55 @@ function cpLinha(c) {
       ${c.forma_prevista === 'BOLETO' ? '<span class="pill cinza">boleto</span>' : ''}</td>
     <td style="font-size:12px">${esc(c.categoria || '—')}</td>
     <td>${esc(c.documento || '—')}
-      ${c.tem_boleto ? `<button class="btn-ic" onclick='verBoleto(${c.id})' title="Ver boleto">📎</button>` : ''}</td>
+      ${c.tem_boleto ? `<button class="btn-ic" onclick='${p}verBoleto(${c.id})' title="Ver boleto">📎</button>` : ''}</td>
     <td class="num">${N(c.valor)}</td>
     <td class="num">${Number(c.valor_pago) > 0 ? N(c.valor_pago) : '—'}</td>
     <td class="num"><strong>${c.status === 'pago' ? '—' : N(c.saldo)}</strong></td>
     <td class="centro"><span class="pill ${CP_PILL[c.status]}">${CP_ROT[c.status]}</span></td>
     <td class="centro" style="white-space:nowrap">
       ${c.status !== 'pago'
-        ? `<button class="btn pequeno verde" onclick='abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
-           <button class="btn-ic" onclick="abrirConta(${c.id})" title="Editar">✏️</button>`
-        : `<button class="btn-ic" onclick="estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
-      <button class="btn-ic" onclick='duplicarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})' title="Duplicar esta conta">⧉</button>
-      <button class="btn-ic" onclick="excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
+        ? `<button class="btn pequeno verde" onclick='${p}abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
+           <button class="btn-ic" onclick="${p}abrirConta(${c.id})" title="Editar">✏️</button>`
+        : `<button class="btn-ic" onclick="${p}estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
+      <button class="btn-ic" onclick='${p}duplicarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})' title="Duplicar esta conta">⧉</button>
+      <button class="btn-ic" onclick="${p}excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
     </td></tr>`;
 }
+
+/** Modal "Dados para pagamento": abre ao clicar na linha da conta. Mostra o
+ *  código de barras do boleto, os dados do PIX e o boleto anexado, com Copiar. */
+let DP_CONTA = null;
+function verDadosPagamento(id) {
+  const c = (typeof CP_CONTAS !== 'undefined' ? CP_CONTAS : []).find((x) => x.id === id);
+  if (!c) return;
+  DP_CONTA = c;
+  const pix = txtPix(c);
+  let h = `<div style="background:#f5f7fa;border-radius:6px;padding:11px;font-size:13.5px;line-height:1.8">
+      <div><strong>${esc(c.fornecedor || c.descricao || 'Conta')}</strong></div>
+      ${c.descricao && c.fornecedor ? `<div>${esc(c.descricao)}</div>` : ''}
+      <div>${c.documento ? 'Documento ' + esc(c.documento) + ' • ' : ''}venc. ${dataBr(c.vencimento)}
+        ${c.status === 'vencido' ? `<span class="pill vermelha">${c.dias} dias em atraso</span>` : ''}</div>
+      <div style="margin-top:5px;font-size:16px"><strong>Saldo: ${R$(c.saldo)}</strong></div>
+    </div>`;
+  if (c.boleto_linha) h += `<div style="margin-top:10px;background:#eef2f7;border-radius:6px;padding:9px 11px">
+      <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">📶 Código de barras do boleto</div>
+      <div style="word-break:break-all;font-variant-numeric:tabular-nums;font-size:15px">${esc(c.boleto_linha)}</div>
+      <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(c.boleto_linha).replace(/'/g, "\\'")}')">Copiar código de barras</button></div>`;
+  if (pix) h += `<div style="margin-top:10px;background:#eef2f7;border-radius:6px;padding:9px 11px">
+      <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">🔑 Dados do PIX</div>
+      <div style="word-break:break-all;font-size:15px">${esc(pix)}</div>
+      <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(pix).replace(/'/g, "\\'")}')">Copiar dados do PIX</button></div>`;
+  if (c.tem_boleto) h += `<div style="margin-top:10px"><button class="btn" onclick="verBoleto(${c.id})">📎 Ver boleto (PDF/foto)</button></div>`;
+  if (!c.boleto_linha && !pix && !c.tem_boleto) h += `<div class="aviso info" style="margin-top:10px"><span>ℹ️</span>
+      <div>Essa conta não tem boleto nem PIX cadastrado. Clique em Pagar para pagar, ou no ✏️ (Editar) para anexar o boleto ou os dados do PIX.</div></div>`;
+  h += `<div class="modal-acoes" style="margin-top:14px">
+      <button class="btn" onclick="fecharModal('modalDadosPagto')">Fechar</button>
+      ${c.status !== 'pago' ? `<button class="btn verde" onclick="pagarDosDados()">💸 Pagar</button>` : ''}
+    </div>`;
+  el('dpCorpo').innerHTML = h;
+  abrirModal('modalDadosPagto');
+}
+function pagarDosDados() { fecharModal('modalDadosPagto'); if (DP_CONTA) abrirPagarConta(DP_CONTA); }
 
 /** Desenha a tabela a partir de CP_CONTAS, respeitando ordenação e agrupamento. */
 function renderPagar() {
