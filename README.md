@@ -118,6 +118,14 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 📊 Painel soma as obras nas vendas (1.23)
+
+No **Painel**, os cartões **Vendas de hoje** e **Vendas do mês** agora somam o
+material que saiu para as obras (a custo), batendo com o relatório Vendas do Dia.
+O subtítulo mostra quanto foi de obra (ex.: "2 cupons + obras R$ 1.000,00"), e o
+gráfico dos últimos 7 dias também inclui as obras. O **Lucro bruto** não muda: a
+obra sai a custo, sem margem.
+
 ### 👤 Vendas do Dia por vendedor (1.22)
 
 No relatório **Vendas do Dia** agora tem a seção **"Por vendedor (caixa)"**, ao

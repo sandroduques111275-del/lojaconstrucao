@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.22 - Vendas do Dia mostra o vendedor';
+const VERSAO = '1.23 - Painel soma as obras nas vendas (igual Vendas do Dia)';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4491,6 +4491,10 @@ app.get('/api/dashboard', auth, (req, res) => {
   const vMes = one(`SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS t
     FROM vendas WHERE situacao='finalizada' AND substr(data,1,10) >= ?`, [inicioMes]);
 
+  // [1.23] material que saiu para as obras (a custo) entra nas vendas, como no relatório Vendas do Dia
+  const obraHoje = one(`SELECT COALESCE(SUM(total),0) AS t FROM obra_saidas WHERE substr(data,1,10) = ?`, [d]);
+  const obraMes = one(`SELECT COALESCE(SUM(total),0) AS t FROM obra_saidas WHERE substr(data,1,10) >= ?`, [inicioMes]);
+
   const lucroMes = one(`
     SELECT COALESCE(SUM(i.total - (i.custo * i.quantidade)),0) AS l
     FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
@@ -4532,11 +4536,24 @@ app.get('/api/dashboard', auth, (req, res) => {
     FROM entregas e JOIN vendas v ON v.id = e.venda_id WHERE e.situacao IN ('pendente', 'parcial')`);
   const entregasAtraso = one("SELECT COUNT(*) AS n FROM entregas WHERE situacao IN ('pendente', 'parcial') AND previsao IS NOT NULL AND previsao < ?", [d]);
 
-  const ultimos7 = all(`
+  const seteDias = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+  const ultimos7Caixa = all(`
     SELECT substr(data,1,10) AS dia, COALESCE(SUM(total),0) AS total, COUNT(*) AS qtd
     FROM vendas WHERE situacao='finalizada' AND substr(data,1,10) >= ?
-    GROUP BY dia ORDER BY dia`,
-    [new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)]);
+    GROUP BY dia`, [seteDias]);
+  const ultimos7Obra = all(`
+    SELECT substr(data,1,10) AS dia, COALESCE(SUM(total),0) AS total
+    FROM obra_saidas WHERE substr(data,1,10) >= ?
+    GROUP BY dia`, [seteDias]);
+  const mapaDias = new Map();
+  ultimos7Caixa.forEach((x) => mapaDias.set(x.dia, { dia: x.dia, total: num(x.total), qtd: x.qtd }));
+  ultimos7Obra.forEach((x) => {
+    const e = mapaDias.get(x.dia) || { dia: x.dia, total: 0, qtd: 0 };
+    e.total = round2(e.total + num(x.total));
+    mapaDias.set(x.dia, e);
+  });
+  const ultimos7 = [...mapaDias.values()].sort((a, b) => a.dia.localeCompare(b.dia))
+    .map((x) => ({ dia: x.dia, total: round2(x.total), qtd: x.qtd }));
 
   const maisVendidos = all(`
     SELECT i.descricao, i.unidade, SUM(i.quantidade) AS qtd, SUM(i.total) AS total
@@ -4545,8 +4562,10 @@ app.get('/api/dashboard', auth, (req, res) => {
     GROUP BY i.descricao, i.unidade ORDER BY total DESC LIMIT 10`, [inicioMes]);
 
   const painel = {
-    hoje: { qtd: vHoje ? vHoje.n : 0, total: round2(vHoje ? vHoje.t : 0) },
-    mes: { qtd: vMes ? vMes.n : 0, total: round2(vMes ? vMes.t : 0) },
+    hoje: { qtd: vHoje ? vHoje.n : 0, total: round2((vHoje ? vHoje.t : 0) + (obraHoje ? obraHoje.t : 0)),
+            caixa: round2(vHoje ? vHoje.t : 0), obra: round2(obraHoje ? obraHoje.t : 0) },
+    mes: { qtd: vMes ? vMes.n : 0, total: round2((vMes ? vMes.t : 0) + (obraMes ? obraMes.t : 0)),
+           caixa: round2(vMes ? vMes.t : 0), obra: round2(obraMes ? obraMes.t : 0) },
     lucro_mes: round2(lucroMes ? lucroMes.l : 0),
     receber: round2(receber ? receber.v : 0),
     vencidos: { valor: round2(vencidos ? vencidos.v : 0), qtd: vencidos ? vencidos.n : 0 },
