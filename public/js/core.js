@@ -389,8 +389,10 @@ async function carregarDashboard() {
 
     const cards = [];
     if (d.hoje) {
-      cards.push(tile('Vendas de hoje', R$(d.hoje.total), d.hoje.qtd + ' cupom(ns)', 'verde'));
-      cards.push(tile('Vendas do mês', R$(d.mes.total), d.mes.qtd + ' cupom(ns)', ''));
+      cards.push(tile('Vendas de hoje', R$(d.hoje.total),
+        d.hoje.qtd + ' cupom(ns)' + (d.hoje.obra > 0 ? ' + obras ' + R$(d.hoje.obra) : ''), 'verde'));
+      cards.push(tile('Vendas do mês', R$(d.mes.total),
+        d.mes.qtd + ' cupom(ns)' + (d.mes.obra > 0 ? ' + obras ' + R$(d.mes.obra) : ''), ''));
       cards.push(tile('Lucro bruto do mês', R$(d.lucro_mes), 'venda menos custo da mercadoria', 'verde'));
     }
     if (d.despesa_mes !== undefined) {
