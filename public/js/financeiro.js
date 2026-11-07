@@ -50,7 +50,9 @@ async function carregarPagar() {
     CP_CONTAS = r.contas || [];
     CP_TOTAIS = r.totais || {};
 
+    const cpTotalGeral = (Number(CP_TOTAIS.em_aberto) || 0) + (Number(CP_TOTAIS.pago) || 0);
     el('cpTotais').innerHTML = `
+      ${tile('Total do filtro', R$(cpTotalGeral), 'pago ' + R$(CP_TOTAIS.pago) + ' · a pagar ' + R$(CP_TOTAIS.em_aberto), '')}
       ${tile('Em aberto', R$(CP_TOTAIS.em_aberto), 'total a pagar no filtro', '')}
       ${tile('Vencidas', R$(CP_TOTAIS.vencidas), CP_TOTAIS.qtd_vencidas + ' conta(s) em atraso',
         CP_TOTAIS.vencidas > 0 ? 'vermelho' : 'verde')}
@@ -194,6 +196,8 @@ function renderPagar() {
   }
 
   const somaValor = CP_CONTAS.reduce((s, c) => s + Number(c.valor), 0);
+  const somaPago = CP_CONTAS.reduce((s, c) => s + Number(c.valor_pago || 0), 0);
+  const somaSaldo = CP_CONTAS.reduce((s, c) => s + (c.status === 'pago' ? 0 : Number(c.saldo || 0)), 0);
   let corpo;
 
   if (!CP_AGRUPAR) {
@@ -236,8 +240,8 @@ function renderPagar() {
     <tfoot><tr>
       <td colspan="6">${CP_CONTAS.length} conta(s)${CP_AGRUPAR ? ' em ' + new Set(CP_CONTAS.map((c) => c.fornecedor || '—')).size + ' fornecedor(es)' : ''}</td>
       <td class="num">${N(somaValor)}</td>
-      <td class="num">${N(CP_TOTAIS.pago)}</td>
-      <td class="num">${N(CP_TOTAIS.em_aberto)}</td>
+      <td class="num">${N(somaPago)}</td>
+      <td class="num">${N(somaSaldo)}</td>
       <td colspan="2"></td>
     </tr></tfoot></table>`;
 }
