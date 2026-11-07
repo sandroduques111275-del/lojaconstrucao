@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.25 - Contas a Pagar: total do filtro (pago + a pagar)';
+const VERSAO = '1.26 - Fiado (a receber) no Vendas do Dia e no Painel';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -524,6 +524,13 @@ function criarEstrutura() {
     emissao TEXT, vencimento TEXT, valor REAL,
     valor_pago REAL DEFAULT 0, pago_em TEXT, forma_pagto TEXT,
     situacao TEXT DEFAULT 'aberto', usuario TEXT, observacao TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS fiados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    data TEXT, cliente_nome TEXT, descricao TEXT, valor REAL,
+    valor_recebido REAL DEFAULT 0, situacao TEXT DEFAULT 'aberto',
+    recebido_em TEXT, forma_recebimento TEXT, criado_em TEXT, usuario TEXT
   );
 
   CREATE TABLE IF NOT EXISTS operadoras (
@@ -1400,6 +1407,7 @@ const REGRAS_PERMISSAO = [
 
   { re: /^\/caixa/, p: 'caixa' },
   { re: /^\/receber/, p: 'receber' },
+  { re: /^\/fiados/, p: 'receber' },
   { re: /^\/cartao\/resumo/, p: 'relDespesas' },
   { re: /^\/cartao/, p: 'cartao' },
   { re: /^\/operadoras/, p: 'operadoras' },
@@ -4478,6 +4486,74 @@ app.post('/api/receber/:id/estornar', auth, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ===== FIADO: "a receber" rápido, sem cadastro de cliente (1.26) =====
+   Registro leve de quem levou e paga depois. Aparece no Vendas do Dia e soma
+   no Painel. Não mexe em estoque nem no caixa — é controle do que falta receber. */
+app.post('/api/fiados', auth, (req, res) => {
+  const nome = txt(req.body.cliente_nome).toUpperCase();
+  const valor = round2(req.body.valor);
+  if (!nome) return res.status(400).json({ erro: 'Informe o nome de quem ficou devendo.' });
+  if (valor <= 0) return res.status(400).json({ erro: 'Informe um valor maior que zero.' });
+  const dia = txt(req.body.dia) ? txt(req.body.dia).slice(0, 10) : hoje();
+  const id = inserir(
+    `INSERT INTO fiados (data, cliente_nome, descricao, valor, valor_recebido, situacao, criado_em, usuario)
+     VALUES (?,?,?,?,0,'aberto',?,?)`,
+    [dia, nome, txt(req.body.descricao), valor, agora(), req.usuario.usuario]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'fiado-novo', `${nome} - R$ ${valor.toFixed(2)}`);
+  res.json({ ok: true, id });
+});
+
+app.get('/api/fiados', auth, (req, res) => {
+  const filtros = []; const params = [];
+  if (req.query.dia) { filtros.push('data = ?'); params.push(txt(req.query.dia).slice(0, 10)); }
+  if (req.query.de) { filtros.push('data >= ?'); params.push(txt(req.query.de).slice(0, 10)); }
+  if (req.query.ate) { filtros.push('data <= ?'); params.push(txt(req.query.ate).slice(0, 10)); }
+  const st = txt(req.query.situacao);
+  if (st === 'aberto') filtros.push("situacao <> 'recebido'");
+  else if (st === 'recebido') filtros.push("situacao = 'recebido'");
+  const where = filtros.length ? 'WHERE ' + filtros.join(' AND ') : '';
+  const lista = all(`SELECT * FROM fiados ${where} ORDER BY situacao, data DESC, id DESC LIMIT 2000`, params);
+  lista.forEach((f) => { f.saldo = round2(num(f.valor) - num(f.valor_recebido)); });
+  res.json({
+    fiados: lista,
+    totais: {
+      aberto: round2(lista.filter((f) => f.situacao !== 'recebido').reduce((s, f) => s + (num(f.valor) - num(f.valor_recebido)), 0)),
+      recebido: round2(lista.filter((f) => f.situacao === 'recebido').reduce((s, f) => s + num(f.valor_recebido), 0)),
+      qtd_aberto: lista.filter((f) => f.situacao !== 'recebido').length
+    }
+  });
+});
+
+app.post('/api/fiados/:id/receber', auth, (req, res) => {
+  const f = one('SELECT * FROM fiados WHERE id = ?', [req.params.id]);
+  if (!f) return res.status(404).json({ erro: 'Fiado nao encontrado.' });
+  if (f.situacao === 'recebido') return res.status(400).json({ erro: 'Esse fiado ja foi recebido.' });
+  run(`UPDATE fiados SET valor_recebido = valor, situacao = 'recebido', recebido_em = ?, forma_recebimento = ? WHERE id = ?`,
+    [agora(), txt(req.body.forma).toUpperCase() || 'DINHEIRO', f.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'fiado-receber', `${f.cliente_nome} - R$ ${num(f.valor).toFixed(2)}`);
+  res.json({ ok: true });
+});
+
+app.post('/api/fiados/:id/estornar', auth, (req, res) => {
+  const f = one('SELECT * FROM fiados WHERE id = ?', [req.params.id]);
+  if (!f) return res.status(404).json({ erro: 'Fiado nao encontrado.' });
+  run(`UPDATE fiados SET valor_recebido = 0, situacao = 'aberto', recebido_em = NULL, forma_recebimento = NULL WHERE id = ?`, [f.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'fiado-estorno', `${f.cliente_nome}`);
+  res.json({ ok: true });
+});
+
+app.delete('/api/fiados/:id', auth, (req, res) => {
+  const f = one('SELECT * FROM fiados WHERE id = ?', [req.params.id]);
+  if (!f) return res.status(404).json({ erro: 'Fiado nao encontrado.' });
+  run('DELETE FROM fiados WHERE id = ?', [f.id]);
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'fiado-excluir', `${f.cliente_nome}`);
+  res.json({ ok: true });
+});
+
 /* =========================================================================
    DASHBOARD E RELATORIOS
    ========================================================================= */
@@ -4504,6 +4580,10 @@ app.get('/api/dashboard', auth, (req, res) => {
     FROM receber WHERE situacao <> 'pago'`);
   const vencidos = one(`SELECT COALESCE(SUM(valor - valor_pago),0) AS v, COUNT(*) AS n
     FROM receber WHERE situacao <> 'pago' AND vencimento < ?`, [d]);
+
+  // [1.26] fiado (a receber rápido) em aberto
+  const fiado = one(`SELECT COALESCE(SUM(valor - valor_recebido),0) AS v, COUNT(*) AS n
+    FROM fiados WHERE situacao <> 'recebido'`);
 
   const cartao = one(`SELECT COALESCE(SUM(valor_liquido - valor_recebido),0) AS v, COUNT(*) AS n
     FROM cartao_recebiveis WHERE situacao <> 'recebido'`);
@@ -4557,6 +4637,7 @@ app.get('/api/dashboard', auth, (req, res) => {
     lucro_mes: round2(lucroMes ? lucroMes.l : 0),
     receber: round2(receber ? receber.v : 0),
     vencidos: { valor: round2(vencidos ? vencidos.v : 0), qtd: vencidos ? vencidos.n : 0 },
+    fiado: { valor: round2(fiado ? fiado.v : 0), qtd: fiado ? fiado.n : 0 },
     orcamentos: { qtd: orc ? orc.n : 0, valor: round2(orc ? orc.v : 0) },
     cartao: round2(cartao ? cartao.v : 0),
     cartao_qtd: cartao ? cartao.n : 0,
@@ -4583,7 +4664,7 @@ app.get('/api/dashboard', auth, (req, res) => {
     some('hoje', 'mes', 'lucro_mes', 'resultado_mes', 'ultimos7', 'mais_vendidos');
   }
   if (!pode(req, 'orcamentos')) some('orcamentos');
-  if (!pode(req, 'receber')) some('receber', 'vencidos');
+  if (!pode(req, 'receber')) some('receber', 'vencidos', 'fiado');
   if (!pode(req, 'cartao')) some('cartao', 'cartao_qtd', 'cartao_atraso', 'taxas_cartao_mes');
   if (!pode(req, 'pagar')) some('pagar', 'pagar_vencidas', 'pagar_hoje', 'despesa_mes', 'resultado_mes');
   if (!pode(req, 'estoque') && !pode(req, 'produtos')) some('estoque', 'criticos');
@@ -4861,6 +4942,11 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
     FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?
     GROUP BY COALESCE(NULLIF(TRIM(vendedor),''),'—') ORDER BY total DESC`, [dia, ateDia]);
 
+  // [1.26] fiados lançados no dia (a receber rápido)
+  const fiadosDia = all(`SELECT * FROM fiados WHERE data = ? ORDER BY situacao, id DESC`, [dia]);
+  const fiadoAberto = round2(fiadosDia.filter((f) => f.situacao !== 'recebido')
+    .reduce((s, f) => s + (num(f.valor) - num(f.valor_recebido)), 0));
+
   // material que saiu para as obras no dia — valor = custo (o que o dono paga)
   const itensObra = all(`
     SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
@@ -4906,6 +4992,9 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
     linhas_qtd: produtos.length,
     pagamentos: pagamentos.map((p) => ({ forma: p.forma, valor: round2(p.valor), qtd: p.qtd })),
     vendedores: vendedores.map((v) => ({ vendedor: v.vendedor, cupons: v.cupons, total: round2(v.total) })),
+    fiados: fiadosDia.map((f) => ({ id: f.id, cliente_nome: f.cliente_nome, descricao: f.descricao,
+      valor: round2(num(f.valor)), saldo: round2(num(f.valor) - num(f.valor_recebido)), situacao: f.situacao })),
+    fiado_aberto: fiadoAberto,
     obras_detalhe: obrasPorNome.map((o) => ({ nome: o.nome, total: round2(o.total), saidas: o.saidas })),
     produtos
   });
