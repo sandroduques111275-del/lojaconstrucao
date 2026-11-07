@@ -118,6 +118,15 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
+### 💰 Contas a Pagar: total do filtro (1.25)
+
+Em **Contas a Pagar**, um cartão novo **"Total do filtro"** soma tudo (pago + a
+pagar) do período, mostrando no subtítulo quanto já pagou e quanto falta. E o
+total **Já pago** (e os demais cartões) agora aparecem **mesmo com a situação
+filtrada em "Em aberto"** — os cartões somam o período inteiro; só a lista
+embaixo respeita o filtro de situação. O rodapé da tabela soma as linhas que
+estão aparecendo.
+
 ### 📊 Painel: loja e obras separados (1.24)
 
 No **Painel**, **Vendas de hoje (loja)** e **Vendas do mês (loja)** contam só a

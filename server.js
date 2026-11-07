@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.24 - Painel: loja e obras totalizados separados';
+const VERSAO = '1.25 - Contas a Pagar: total do filtro (pago + a pagar)';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -5368,23 +5368,26 @@ app.get('/api/cp/contas', auth, (req, res) => {
     c.tem_boleto = comBoleto.has(c.id) ? 1 : 0;
   });
 
+  // os TOTAIS (cards) somam o PERÍODO TODO, independentes do filtro de situação —
+  // assim o "já pago" aparece mesmo quando a lista está filtrada por "em aberto"
+  const abertas = lista.filter((c) => c.status !== 'pago');
+  const totais = {
+    em_aberto: round2(abertas.reduce((s, c) => s + c.saldo, 0)),
+    vencidas: round2(abertas.filter((c) => c.status === 'vencido').reduce((s, c) => s + c.saldo, 0)),
+    vence_hoje: round2(abertas.filter((c) => c.status === 'vence_hoje').reduce((s, c) => s + c.saldo, 0)),
+    pago: round2(lista.reduce((s, c) => s + num(c.valor_pago), 0)),
+    qtd_vencidas: abertas.filter((c) => c.status === 'vencido').length
+  };
+
+  // a LISTA visível respeita o filtro de situação escolhido
+  let visiveis = lista;
   const st = txt(req.query.situacao);
   if (st && st !== 'todas') {
-    if (st === 'aberto') lista = lista.filter((c) => c.status !== 'pago');
-    else lista = lista.filter((c) => c.status === st);
+    if (st === 'aberto') visiveis = lista.filter((c) => c.status !== 'pago');
+    else visiveis = lista.filter((c) => c.status === st);
   }
 
-  const abertas = lista.filter((c) => c.status !== 'pago');
-  res.json({
-    contas: lista,
-    totais: {
-      em_aberto: round2(abertas.reduce((s, c) => s + c.saldo, 0)),
-      vencidas: round2(abertas.filter((c) => c.status === 'vencido').reduce((s, c) => s + c.saldo, 0)),
-      vence_hoje: round2(abertas.filter((c) => c.status === 'vence_hoje').reduce((s, c) => s + c.saldo, 0)),
-      pago: round2(lista.reduce((s, c) => s + num(c.valor_pago), 0)),
-      qtd_vencidas: abertas.filter((c) => c.status === 'vencido').length
-    }
-  });
+  res.json({ contas: visiveis, totais });
 });
 
 app.post('/api/cp/contas', auth, (req, res) => {
