@@ -118,13 +118,14 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
-### 📊 Painel soma as obras nas vendas (1.23)
+### 📊 Painel: loja e obras separados (1.24)
 
-No **Painel**, os cartões **Vendas de hoje** e **Vendas do mês** agora somam o
-material que saiu para as obras (a custo), batendo com o relatório Vendas do Dia.
-O subtítulo mostra quanto foi de obra (ex.: "2 cupons + obras R$ 1.000,00"), e o
-gráfico dos últimos 7 dias também inclui as obras. O **Lucro bruto** não muda: a
-obra sai a custo, sem margem.
+No **Painel**, **Vendas de hoje (loja)** e **Vendas do mês (loja)** contam só a
+loja (caixa). As obras ficam num cartão próprio, **Obras de hoje** (em laranja),
+que totaliza à parte e mostra também o total do mês (a custo). O gráfico dos
+últimos 7 dias é só da loja. O **Lucro bruto** segue só da loja (a obra sai a
+custo, sem margem). Quem quiser o total junto (loja + obra) tem o relatório
+**Vendas do Dia**.
 
 ### 👤 Vendas do Dia por vendedor (1.22)
 

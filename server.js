@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.23 - Painel soma as obras nas vendas (igual Vendas do Dia)';
+const VERSAO = '1.24 - Painel: loja e obras totalizados separados';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4536,24 +4536,12 @@ app.get('/api/dashboard', auth, (req, res) => {
     FROM entregas e JOIN vendas v ON v.id = e.venda_id WHERE e.situacao IN ('pendente', 'parcial')`);
   const entregasAtraso = one("SELECT COUNT(*) AS n FROM entregas WHERE situacao IN ('pendente', 'parcial') AND previsao IS NOT NULL AND previsao < ?", [d]);
 
-  const seteDias = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
-  const ultimos7Caixa = all(`
+  // gráfico dos últimos 7 dias: só a loja (caixa). As obras ficam no card separado.
+  const ultimos7 = all(`
     SELECT substr(data,1,10) AS dia, COALESCE(SUM(total),0) AS total, COUNT(*) AS qtd
     FROM vendas WHERE situacao='finalizada' AND substr(data,1,10) >= ?
-    GROUP BY dia`, [seteDias]);
-  const ultimos7Obra = all(`
-    SELECT substr(data,1,10) AS dia, COALESCE(SUM(total),0) AS total
-    FROM obra_saidas WHERE substr(data,1,10) >= ?
-    GROUP BY dia`, [seteDias]);
-  const mapaDias = new Map();
-  ultimos7Caixa.forEach((x) => mapaDias.set(x.dia, { dia: x.dia, total: num(x.total), qtd: x.qtd }));
-  ultimos7Obra.forEach((x) => {
-    const e = mapaDias.get(x.dia) || { dia: x.dia, total: 0, qtd: 0 };
-    e.total = round2(e.total + num(x.total));
-    mapaDias.set(x.dia, e);
-  });
-  const ultimos7 = [...mapaDias.values()].sort((a, b) => a.dia.localeCompare(b.dia))
-    .map((x) => ({ dia: x.dia, total: round2(x.total), qtd: x.qtd }));
+    GROUP BY dia ORDER BY dia`,
+    [new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)]);
 
   const maisVendidos = all(`
     SELECT i.descricao, i.unidade, SUM(i.quantidade) AS qtd, SUM(i.total) AS total
