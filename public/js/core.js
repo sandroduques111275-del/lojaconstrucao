@@ -413,6 +413,10 @@ async function carregarDashboard() {
       cards.push(tile('A receber (crediário)', R$(d.receber),
         d.vencidos.qtd + ' parcela(s) vencida(s)', d.vencidos.valor > 0 ? 'vermelho' : ''));
     }
+    if (d.fiado !== undefined && (d.fiado.valor > 0 || d.fiado.qtd > 0)) {
+      cards.push(tile('A receber (fiado)', R$(d.fiado.valor),
+        d.fiado.qtd + ' em aberto', d.fiado.valor > 0 ? 'laranja' : ''));
+    }
     if (d.cartao !== undefined) {
       cards.push(tile('A receber (cartão)', R$(d.cartao), d.cartao_qtd + ' parcela(s) da maquininha', ''));
     }

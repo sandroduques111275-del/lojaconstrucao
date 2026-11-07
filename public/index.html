@@ -2214,6 +2214,25 @@
   </div>
 </div>
 
+<!-- lançar fiado (a receber rápido) -->
+<div class="modal" id="modalFiado">
+  <div class="modal-box estreito">
+    <div class="modal-cab"><h3>💰 Lançar fiado (a receber)</h3><button class="fechar" onclick="fecharModal('modalFiado')">×</button></div>
+    <div class="modal-corpo">
+      <div class="campo"><label>Quem ficou devendo *</label><input id="fiado_nome" placeholder="ex.: João da obra"></div>
+      <div class="linha">
+        <div class="campo m"><label>Valor *</label><input id="fiado_valor" inputmode="decimal" placeholder="0,00"></div>
+        <div class="campo"><label>Descrição</label><input id="fiado_desc" placeholder="ex.: 10 sacos de cimento"></div>
+      </div>
+      <div class="dica">Entra como "a receber" no dia e soma no Painel. Não mexe no estoque nem no caixa — é só o controle do que falta receber.</div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalFiado')">Cancelar</button>
+      <button class="btn primario" onclick="salvarFiado()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- fornecedor -->
 <div class="modal" id="modalFornecedor">
   <div class="modal-box">

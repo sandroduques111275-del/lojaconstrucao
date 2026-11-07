@@ -67,7 +67,74 @@ async function carregarVendasDia() {
             <tfoot><tr><td colspan="2" class="num">Total obras</td><td class="num">${N(d.obras.total)}</td></tr></tfoot>
           </table></div>
         </div>` : ''}
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+          <h3 style="margin:0">💰 A receber (fiado)</h3>
+          <button class="btn pequeno primario" onclick="abrirFiado()">+ Lançar fiado</button>
+        </div>
+        <div class="tabela-wrap"><table>
+          <thead><tr><th>Quem deve</th><th>Descrição</th><th class="num">Valor</th><th class="centro">Situação</th><th></th></tr></thead>
+          <tbody>${(d.fiados || []).map((f) => `<tr>
+            <td><strong>${esc(f.cliente_nome)}</strong></td>
+            <td>${esc(f.descricao || '—')}</td>
+            <td class="num">${N(f.valor)}</td>
+            <td class="centro">${f.situacao === 'recebido'
+              ? '<span class="pill verde">recebido</span>'
+              : '<span class="pill amarela">a receber</span>'}</td>
+            <td class="centro" style="white-space:nowrap">
+              ${f.situacao === 'recebido'
+                ? `<button class="btn-ic" onclick="estornarFiado(${f.id})" title="Desfazer recebimento">↺</button>`
+                : `<button class="btn pequeno verde" onclick="receberFiado(${f.id})">Receber</button>`}
+              <button class="btn-ic" onclick="excluirFiado(${f.id})" title="Excluir">🗑️</button>
+            </td></tr>`).join('')
+            || '<tr><td colspan="5" class="centro" style="padding:16px">Nenhum fiado nesse dia. Use "Lançar fiado" para registrar quem levou e paga depois.</td></tr>'}
+          </tbody>
+          ${d.fiado_aberto > 0 ? `<tfoot><tr><td colspan="2" class="num">A receber</td><td class="num"><strong>${N(d.fiado_aberto)}</strong></td><td colspan="2"></td></tr></tfoot>` : ''}
+        </table></div>
       </div>`;
+  } catch (e) { erro(e.message); }
+}
+
+/* ---------- fiado (a receber rápido) — lançar e receber no próprio Vendas do Dia ---------- */
+function abrirFiado() {
+  setVal('fiado_nome', ''); setVal('fiado_valor', ''); setVal('fiado_desc', '');
+  abrirModal('modalFiado');
+  setTimeout(() => { try { el('fiado_nome').focus(); } catch (e) {} }, 100);
+}
+async function salvarFiado() {
+  if (!val('fiado_nome')) { alerta('Informe quem ficou devendo.'); return; }
+  const v = valor(el('fiado_valor').value);
+  if (!v || v <= 0) { alerta('Informe o valor do fiado.'); return; }
+  try {
+    await api('/api/fiados', { method: 'POST', body: {
+      cliente_nome: val('fiado_nome'), valor: v, descricao: val('fiado_desc'), dia: val('relDiaData') } });
+    fecharModal('modalFiado');
+    carregarVendasDia();
+    ok('Fiado lançado.');
+  } catch (e) { erro(e.message); }
+}
+async function receberFiado(id) {
+  try {
+    await api('/api/fiados/' + id + '/receber', { method: 'POST', body: { forma: 'DINHEIRO' } });
+    carregarVendasDia();
+    ok('Fiado recebido.');
+  } catch (e) { erro(e.message); }
+}
+async function estornarFiado(id) {
+  try {
+    await api('/api/fiados/' + id + '/estornar', { method: 'POST', body: {} });
+    carregarVendasDia();
+    ok('Recebimento desfeito.');
+  } catch (e) { erro(e.message); }
+}
+async function excluirFiado(id) {
+  if (!confirm('Excluir este fiado?')) return;
+  try {
+    await api('/api/fiados/' + id, { method: 'DELETE' });
+    carregarVendasDia();
+    ok('Fiado excluído.');
   } catch (e) { erro(e.message); }
 }
 
