@@ -395,23 +395,16 @@ async function carregarDashboard() {
         cards.push(tile('Projeção do mês', R$(d.projecao_mes),
           'faturamento previsto · média ' + R$(d.media_dia) + '/dia', ''));
       }
-      if (podeVer('obras')) {
-        cards.push(tile('Obras de hoje', R$(d.hoje.obra), 'no mês: ' + R$(d.mes.obra) + ' (a custo)', 'laranja'));
-      }
       cards.push(tile('Lucro bruto do mês', R$(d.lucro_mes), 'venda menos custo da mercadoria', 'verde'));
     }
     if (d.despesa_mes !== undefined) {
-      cards.push(tile('Despesas pagas no mês', R$(d.despesa_mes), 'contas quitadas',
+      cards.push(tile('Despesas pagas no mês', R$(d.despesa_mes), 'pago das contas do mês',
         d.despesa_mes > 0 ? 'laranja' : ''));
     }
     if (d.resultado_mes !== undefined) {
       cards.push(tile('Resultado do mês', R$(d.resultado_mes),
-        d.resultado_mes >= 0 ? 'lucro menos despesas' : 'no vermelho',
+        d.resultado_mes >= 0 ? 'faturamento menos pagamentos' : 'no vermelho',
         d.resultado_mes >= 0 ? 'verde' : 'vermelho'));
-    }
-    if (d.orcamentos !== undefined && d.orcamentos.qtd > 0) {
-      cards.push(tile('Orçamentos em aberto', d.orcamentos.qtd,
-        R$(d.orcamentos.valor) + ' aguardando resposta', 'laranja'));
     }
     if (d.fiado !== undefined && (d.fiado.valor > 0 || d.fiado.qtd > 0)) {
       cards.push(tile('A receber (fiado)', R$(d.fiado.valor),
