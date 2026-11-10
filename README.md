@@ -118,63 +118,6 @@ mais simples e não depende de configurar o git.
 - Vencido pode ser reaberto, e o que não deu certo pode ser cancelado com motivo
 - A lista mostra a **taxa de conversão**: quantos orçamentos viraram venda
 
-### 💰 Contas a Pagar: total do filtro (1.25)
-
-Em **Contas a Pagar**, um cartão novo **"Total do filtro"** soma tudo (pago + a
-pagar) do período, mostrando no subtítulo quanto já pagou e quanto falta. E o
-total **Já pago** (e os demais cartões) agora aparecem **mesmo com a situação
-filtrada em "Em aberto"** — os cartões somam o período inteiro; só a lista
-embaixo respeita o filtro de situação. O rodapé da tabela soma as linhas que
-estão aparecendo.
-
-### 📊 Painel: loja e obras separados (1.24)
-
-No **Painel**, **Vendas de hoje (loja)** e **Vendas do mês (loja)** contam só a
-loja (caixa). As obras ficam num cartão próprio, **Obras de hoje** (em laranja),
-que totaliza à parte e mostra também o total do mês (a custo). O gráfico dos
-últimos 7 dias é só da loja. O **Lucro bruto** segue só da loja (a obra sai a
-custo, sem margem). Quem quiser o total junto (loja + obra) tem o relatório
-**Vendas do Dia**.
-
-### 👤 Vendas do Dia por vendedor (1.22)
-
-No relatório **Vendas do Dia** agora tem a seção **"Por vendedor (caixa)"**, ao
-lado de "Como foi pago": cada vendedor com o número de cupons e o total vendido
-no dia, do que mais vendeu para o que menos vendeu. O vendedor é o que estava na
-venda (quem registrou, ou o nome escolhido na Frente de Caixa).
-
-### 🔎 Clicar na conta mostra os dados para pagamento (1.21)
-
-Em **Contas a Pagar**, clique em cima de qualquer linha para abrir **"Dados para
-pagamento"**: o **código de barras do boleto** e os **dados do PIX** (cada um com
-botão **Copiar**), o botão **Ver boleto** (PDF/foto) e um botão **Pagar** que leva
-direto pra tela de pagamento. Os botões da linha (Pagar, ✏️, ⧉, 🗑️, 📎) continuam
-funcionando normalmente — clicar neles não abre essa janela.
-
-### 💸 Pagar conta mais simples (1.20)
-
-Na tela **Pagar conta** (Contas a Pagar) o campo **Forma** saiu. Ficam
-Juros/Multa, Desconto, Valor a pagar e Observação. A opção **"Paguei em
-dinheiro — tirar do caixa (lança uma sangria)"** continua, agora **desmarcada
-por padrão**: marque só quando o dinheiro saiu da gaveta do caixa, e aí a
-sangria é lançada como antes.
-
-### 🧾 Vendas do Dia (1.19)
-
-Menu **Relatórios → Vendas do Dia**. Um resumo de tudo que saiu num dia só,
-começando em **hoje** (tem botão **Hoje / Ontem** e escolher a data).
-
-- Cartões no topo: **Vendido no dia** (caixa + obras), **Caixa**, **Obras** e
-  **Itens**.
-- Tabela **Produtos que saíram no dia**: cada produto com a quantidade e o
-  valor, somando o que saiu no **caixa** e o que saiu para as **obras** (os de
-  obra levam o 🏗️ e a coluna **Qtd. obra**). Vem ordenado do que mais vendeu
-  para o que menos vendeu.
-- **Como foi pago** (dinheiro, PIX, cartão…) e as **Saídas para obras**.
-- Botão **Imprimir**.
-- As **saídas para obras entram no total do dia pelo valor de custo** (o que o
-  dono paga à loja), então o "vendido no dia" já conta o que foi para as obras.
-
 ### 🏗️ Obras do dono (1.16)
 
 Menu **Operação → Obras**. Controla o material que sai da loja para as obras do
@@ -191,18 +134,12 @@ dono e quanto ele deve acertar com a loja.
 - Acesso: Administrador e Gerente (liberável a outros perfis em *Configurações →
   Perfis → Obras*).
 
-### 💳 Contas a Pagar: boleto e PIX (1.16 / 1.17)
+### 💳 Contas a Pagar: boleto e PIX (1.16)
 
 - Ao lançar/editar uma conta, escolha **como vai pagar**: **Boleto** (anexa o PDF
   ou foto — fica guardado no sistema e vai no backup; um 📎 na lista e um botão na
   tela de pagar abrem o boleto) ou **PIX** (guarda os dados do PIX, que aparecem
   com botão **Copiar** na hora de pagar; a conta ganha a etiqueta 🔑 PIX).
-- **(1.17)** no Boleto, um campo para digitar/colar o **código de barras (linha
-  digitável)**; na hora de pagar ele aparece com botão **Copiar**, para pagar
-  pelo app do banco sem abrir o PDF.
-- **(1.18)** botão **Duplicar** (⧉) em cada conta: abre o "Lançar conta" já
-  preenchido com os dados dela (vencimento no mês seguinte) para repetir contas
-  que voltam todo mês; salva como conta nova.
 
 ### 📱 Contas a Pagar e celular (1.15)
 

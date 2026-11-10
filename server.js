@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.26 - Fiado (a receber) no Vendas do Dia e no Painel';
+const VERSAO = '1.27 - Painel: projecao do mes, a pagar do mes, cards enxutos';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4561,6 +4561,10 @@ app.delete('/api/fiados/:id', auth, (req, res) => {
 app.get('/api/dashboard', auth, (req, res) => {
   const d = hoje();
   const inicioMes = d.slice(0, 8) + '01';
+  // [1.27] dias do mês, para "a pagar do mês" e a projeção de faturamento
+  const diaNum = parseInt(d.slice(8, 10), 10) || 1;
+  const diasNoMes = new Date(parseInt(d.slice(0, 4), 10), parseInt(d.slice(5, 7), 10), 0).getDate();
+  const fimMes = d.slice(0, 8) + String(diasNoMes).padStart(2, '0');
 
   const vHoje = one(`SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS t
     FROM vendas WHERE situacao='finalizada' AND substr(data,1,10) = ?`, [d]);
@@ -4600,6 +4604,9 @@ app.get('/api/dashboard', auth, (req, res) => {
     FROM cp_contas WHERE situacao <> 'pago' AND vencimento = ?`, [d]);
   const despesaMes = one(`SELECT COALESCE(SUM(valor_pago),0) AS v
     FROM cp_contas WHERE pago_em IS NOT NULL AND substr(pago_em,1,10) >= ?`, [inicioMes]);
+  // [1.27] a pagar DO MÊS: o que falta pagar com vencimento dentro do mês corrente
+  const pagarMes = one(`SELECT COALESCE(SUM(valor - valor_pago),0) AS v, COUNT(*) AS n
+    FROM cp_contas WHERE situacao <> 'pago' AND vencimento >= ? AND vencimento <= ?`, [inicioMes, fimMes]);
 
   const orc = one(`SELECT COUNT(*) AS n, COALESCE(SUM(total),0) AS v FROM orcamentos
     WHERE situacao = 'aberto' AND (validade IS NULL OR validade >= ?)`, [d]);
@@ -4629,11 +4636,18 @@ app.get('/api/dashboard', auth, (req, res) => {
     WHERE v.situacao='finalizada' AND substr(v.data,1,10) >= ?
     GROUP BY i.descricao, i.unidade ORDER BY total DESC LIMIT 10`, [inicioMes]);
 
+  // [1.27] projeção de faturamento do mês pela média diária das vendas da loja já feitas
+  const faturMes = round2(vMes ? vMes.t : 0);
+  const mediaDia = round2(faturMes / diaNum);
+  const projecaoMes = round2(mediaDia * diasNoMes);
+
   const painel = {
     hoje: { qtd: vHoje ? vHoje.n : 0, total: round2((vHoje ? vHoje.t : 0) + (obraHoje ? obraHoje.t : 0)),
             caixa: round2(vHoje ? vHoje.t : 0), obra: round2(obraHoje ? obraHoje.t : 0) },
     mes: { qtd: vMes ? vMes.n : 0, total: round2((vMes ? vMes.t : 0) + (obraMes ? obraMes.t : 0)),
            caixa: round2(vMes ? vMes.t : 0), obra: round2(obraMes ? obraMes.t : 0) },
+    projecao_mes: projecaoMes,
+    media_dia: mediaDia,
     lucro_mes: round2(lucroMes ? lucroMes.l : 0),
     receber: round2(receber ? receber.v : 0),
     vencidos: { valor: round2(vencidos ? vencidos.v : 0), qtd: vencidos ? vencidos.n : 0 },
@@ -4644,6 +4658,7 @@ app.get('/api/dashboard', auth, (req, res) => {
     cartao_atraso: { valor: round2(cartaoAtraso ? cartaoAtraso.v : 0), qtd: cartaoAtraso ? cartaoAtraso.n : 0 },
     taxas_cartao_mes: round2(taxasMes ? taxasMes.v : 0),
     pagar: round2(pagar ? pagar.v : 0),
+    pagar_mes: { valor: round2(pagarMes ? pagarMes.v : 0), qtd: pagarMes ? pagarMes.n : 0 },
     pagar_vencidas: { valor: round2(pagarVencidas ? pagarVencidas.v : 0), qtd: pagarVencidas ? pagarVencidas.n : 0 },
     pagar_hoje: { valor: round2(pagarHoje ? pagarHoje.v : 0), qtd: pagarHoje ? pagarHoje.n : 0 },
     despesa_mes: round2(despesaMes ? despesaMes.v : 0),
@@ -4661,12 +4676,12 @@ app.get('/api/dashboard', auth, (req, res) => {
      estoque nao precisa enxergar o faturamento do dia. */
   const some = (...campos) => campos.forEach((c) => { delete painel[c]; });
   if (!pode(req, 'vendas') && !pode(req, 'pdv')) {
-    some('hoje', 'mes', 'lucro_mes', 'resultado_mes', 'ultimos7', 'mais_vendidos');
+    some('hoje', 'mes', 'lucro_mes', 'resultado_mes', 'ultimos7', 'mais_vendidos', 'projecao_mes', 'media_dia');
   }
   if (!pode(req, 'orcamentos')) some('orcamentos');
   if (!pode(req, 'receber')) some('receber', 'vencidos', 'fiado');
   if (!pode(req, 'cartao')) some('cartao', 'cartao_qtd', 'cartao_atraso', 'taxas_cartao_mes');
-  if (!pode(req, 'pagar')) some('pagar', 'pagar_vencidas', 'pagar_hoje', 'despesa_mes', 'resultado_mes');
+  if (!pode(req, 'pagar')) some('pagar', 'pagar_mes', 'pagar_vencidas', 'pagar_hoje', 'despesa_mes', 'resultado_mes');
   if (!pode(req, 'estoque') && !pode(req, 'produtos')) some('estoque', 'criticos');
   if (!pode(req, 'caixa')) some('caixa');
 
