@@ -391,9 +391,12 @@ async function carregarDashboard() {
     if (d.hoje) {
       cards.push(tile('Vendas de hoje (loja)', R$(d.hoje.caixa), d.hoje.qtd + ' cupom(ns)', 'verde'));
       cards.push(tile('Vendas do mês (loja)', R$(d.mes.caixa), d.mes.qtd + ' cupom(ns)', ''));
+      if (podeVer('obras')) {
+        cards.push(tile('Vendas das obras (mês)', R$(d.mes.obra), 'material pras obras (a custo)', 'laranja'));
+      }
       if (d.projecao_mes !== undefined) {
         cards.push(tile('Projeção do mês', R$(d.projecao_mes),
-          'faturamento previsto · média ' + R$(d.media_dia) + '/dia', ''));
+          'loja + obras · média ' + R$(d.media_dia) + '/dia', ''));
       }
       cards.push(tile('Lucro bruto do mês', R$(d.lucro_mes), 'venda menos custo da mercadoria', 'verde'));
     }
@@ -401,18 +404,9 @@ async function carregarDashboard() {
       cards.push(tile('Despesas pagas no mês', R$(d.despesa_mes), 'pago das contas do mês',
         d.despesa_mes > 0 ? 'laranja' : ''));
     }
-    if (d.resultado_mes !== undefined) {
-      cards.push(tile('Resultado do mês', R$(d.resultado_mes),
-        d.resultado_mes >= 0 ? 'faturamento menos pagamentos' : 'no vermelho',
-        d.resultado_mes >= 0 ? 'verde' : 'vermelho'));
-    }
     if (d.fiado !== undefined && (d.fiado.valor > 0 || d.fiado.qtd > 0)) {
       cards.push(tile('A receber (fiado)', R$(d.fiado.valor),
         d.fiado.qtd + ' em aberto', d.fiado.valor > 0 ? 'laranja' : ''));
-    }
-    if (d.pagar_mes !== undefined) {
-      cards.push(tile('A pagar (mês)', R$(d.pagar_mes.valor),
-        'falta pagar neste mês · ' + d.pagar_mes.qtd + ' conta(s)', d.pagar_mes.valor > 0 ? 'laranja' : ''));
     }
     if (d.caixa !== undefined) {
       cards.push(tile('Caixa', d.caixa_aberto ? 'ABERTO' : 'FECHADO',
