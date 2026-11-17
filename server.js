@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.27 - Painel: projecao do mes, a pagar do mes, cards enxutos';
+const VERSAO = '1.30 - Curva ABC: agrupar por fornecedor';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4602,8 +4602,10 @@ app.get('/api/dashboard', auth, (req, res) => {
     FROM cp_contas WHERE situacao <> 'pago' AND vencimento < ?`, [d]);
   const pagarHoje = one(`SELECT COALESCE(SUM(valor - valor_pago),0) AS v, COUNT(*) AS n
     FROM cp_contas WHERE situacao <> 'pago' AND vencimento = ?`, [d]);
+  // [1.28] despesas pagas do mês = o que já foi pago das contas que VENCEM no mês
+  // (bate com o "Já pago" do Contas a Pagar no filtro "Este mês")
   const despesaMes = one(`SELECT COALESCE(SUM(valor_pago),0) AS v
-    FROM cp_contas WHERE pago_em IS NOT NULL AND substr(pago_em,1,10) >= ?`, [inicioMes]);
+    FROM cp_contas WHERE vencimento >= ? AND vencimento <= ?`, [inicioMes, fimMes]);
   // [1.27] a pagar DO MÊS: o que falta pagar com vencimento dentro do mês corrente
   const pagarMes = one(`SELECT COALESCE(SUM(valor - valor_pago),0) AS v, COUNT(*) AS n
     FROM cp_contas WHERE situacao <> 'pago' AND vencimento >= ? AND vencimento <= ?`, [inicioMes, fimMes]);
@@ -4636,9 +4638,11 @@ app.get('/api/dashboard', auth, (req, res) => {
     WHERE v.situacao='finalizada' AND substr(v.data,1,10) >= ?
     GROUP BY i.descricao, i.unidade ORDER BY total DESC LIMIT 10`, [inicioMes]);
 
-  // [1.27] projeção de faturamento do mês pela média diária das vendas da loja já feitas
+  // [1.27] faturamento do mês (loja) — usado no resultado do mês
   const faturMes = round2(vMes ? vMes.t : 0);
-  const mediaDia = round2(faturMes / diaNum);
+  // [1.29] a projeção soma loja + obras do mês e projeta pela média diária
+  const baseProjecao = round2(faturMes + (obraMes ? obraMes.t : 0));
+  const mediaDia = round2(baseProjecao / diaNum);
   const projecaoMes = round2(mediaDia * diasNoMes);
 
   const painel = {
@@ -4662,7 +4666,7 @@ app.get('/api/dashboard', auth, (req, res) => {
     pagar_vencidas: { valor: round2(pagarVencidas ? pagarVencidas.v : 0), qtd: pagarVencidas ? pagarVencidas.n : 0 },
     pagar_hoje: { valor: round2(pagarHoje ? pagarHoje.v : 0), qtd: pagarHoje ? pagarHoje.n : 0 },
     despesa_mes: round2(despesaMes ? despesaMes.v : 0),
-    resultado_mes: round2((lucroMes ? lucroMes.l : 0) - (despesaMes ? despesaMes.v : 0)),
+    resultado_mes: round2(faturMes - (despesaMes ? despesaMes.v : 0)),
     estoque: { valor: round2(estoque ? estoque.v : 0), produtos: estoque ? estoque.n : 0 },
     criticos: criticos ? criticos.n : 0,
     entregas: { abertas: entregasAbertas ? entregasAbertas.n : 0, valor: round2(entregasAbertas ? entregasAbertas.total : 0),
@@ -4748,13 +4752,13 @@ app.get('/api/relatorios/produtos', auth, (req, res) => {
     SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
            SUM(i.quantidade) AS qtd, SUM(i.total) AS total,
            SUM(i.custo * i.quantidade) AS custo,
-           c.nome AS categoria
+           c.nome AS categoria, p.fornecedor AS fornecedor
     FROM venda_itens i
     JOIN vendas v ON v.id = i.venda_id
     LEFT JOIN produtos p ON p.id = i.produto_id
     LEFT JOIN categorias c ON c.id = p.categoria_id
     WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
-    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade, c.nome
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade, c.nome, p.fornecedor
     ORDER BY total DESC`, [de, ate]);
 
   const geral = lista.reduce((s, i) => s + num(i.total), 0);
@@ -4773,15 +4777,21 @@ app.get('/api/relatorios/produtos', auth, (req, res) => {
   });
 
   const porCategoria = {};
+  const porFornecedor = {};
   lista.forEach((i) => {
     const c = i.categoria || 'SEM CATEGORIA';
     porCategoria[c] = round2((porCategoria[c] || 0) + i.total);
+    const f = (i.fornecedor && String(i.fornecedor).trim()) ? String(i.fornecedor).trim().toUpperCase() : 'SEM FORNECEDOR';
+    porFornecedor[f] = round2((porFornecedor[f] || 0) + i.total);
   });
 
   res.json({
     produtos: lista,
     total_geral: round2(geral),
     por_categoria: Object.entries(porCategoria)
+      .map(([nome, total]) => ({ nome, total, participacao: geral ? round2((total / geral) * 100) : 0 }))
+      .sort((a, b) => b.total - a.total),
+    por_fornecedor: Object.entries(porFornecedor)
       .map(([nome, total]) => ({ nome, total, participacao: geral ? round2((total / geral) * 100) : 0 }))
       .sort((a, b) => b.total - a.total)
   });
