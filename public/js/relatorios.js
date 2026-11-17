@@ -216,14 +216,26 @@ async function carregarRelProdutos() {
         ${tile('Curva B / C', contaB + ' / ' + contaC, 'giro médio e baixo', 'laranja')}
       </div>
 
-      <div class="card"><h3>🗂️ Por categoria</h3>
-        <div class="tabela-wrap"><table>
-          <thead><tr><th>Categoria</th><th class="num">Total</th><th style="width:180px">Participação</th></tr></thead>
-          <tbody>${r.por_categoria.map((c) => `<tr>
-            <td>${esc(c.nome)}</td><td class="num"><strong>${N(c.total)}</strong></td>
-            <td>${barra(c.participacao)}<small>${c.participacao.toFixed(1)}%</small></td></tr>`).join('')
-            || '<tr><td colspan="3" class="centro" style="padding:20px">Sem dados.</td></tr>'}
-          </tbody></table></div>
+      <div class="grid g2">
+        <div class="card"><h3>🗂️ Por categoria</h3>
+          <div class="tabela-wrap"><table>
+            <thead><tr><th>Categoria</th><th class="num">Total</th><th style="width:140px">Participação</th></tr></thead>
+            <tbody>${r.por_categoria.map((c) => `<tr>
+              <td>${esc(c.nome)}</td><td class="num"><strong>${N(c.total)}</strong></td>
+              <td>${barra(c.participacao)}<small>${c.participacao.toFixed(1)}%</small></td></tr>`).join('')
+              || '<tr><td colspan="3" class="centro" style="padding:20px">Sem dados.</td></tr>'}
+            </tbody></table></div>
+        </div>
+
+        <div class="card"><h3>🚚 Por fornecedor</h3>
+          <div class="tabela-wrap"><table>
+            <thead><tr><th>Fornecedor</th><th class="num">Total</th><th style="width:140px">Participação</th></tr></thead>
+            <tbody>${(r.por_fornecedor || []).map((f) => `<tr>
+              <td>${esc(f.nome)}</td><td class="num"><strong>${N(f.total)}</strong></td>
+              <td>${barra(f.participacao)}<small>${f.participacao.toFixed(1)}%</small></td></tr>`).join('')
+              || '<tr><td colspan="3" class="centro" style="padding:20px">Sem dados.</td></tr>'}
+            </tbody></table></div>
+        </div>
       </div>
 
       <div class="card"><h3>🏆 Ranking de produtos (curva ABC)</h3>
