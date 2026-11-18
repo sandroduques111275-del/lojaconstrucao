@@ -229,7 +229,7 @@ async function sair() {
 
 /* ---------------- navegação ---------------- */
 /* telas que nao sao modulo proprio: valem pela permissao de outro modulo */
-const SECAO_PERMISSAO = { ncm: 'produtos' };
+const SECAO_PERMISSAO = { ncm: 'produtos', relDia: 'relVendas' };
 
 function irPara(secao) {
   if (!podeVer(SECAO_PERMISSAO[secao] || secao)) {
@@ -264,6 +264,7 @@ function irPara(secao) {
     estoque: carregarEstoque,
     clientes: carregarClientes,
     fornecedores: carregarFornecedores,
+    relDia: carregarVendasDia,
     relVendas: carregarRelVendas,
     relProdutos: carregarRelProdutos,
     relClientes: carregarRelClientes,
@@ -388,33 +389,24 @@ async function carregarDashboard() {
 
     const cards = [];
     if (d.hoje) {
-      cards.push(tile('Vendas de hoje', R$(d.hoje.total), d.hoje.qtd + ' cupom(ns)', 'verde'));
-      cards.push(tile('Vendas do mês', R$(d.mes.total), d.mes.qtd + ' cupom(ns)', ''));
+      cards.push(tile('Vendas de hoje (loja)', R$(d.hoje.caixa), d.hoje.qtd + ' cupom(ns)', 'verde'));
+      cards.push(tile('Vendas do mês (loja)', R$(d.mes.caixa), d.mes.qtd + ' cupom(ns)', ''));
+      if (podeVer('obras')) {
+        cards.push(tile('Vendas das obras (mês)', R$(d.mes.obra), 'material pras obras (a custo)', 'laranja'));
+      }
+      if (d.projecao_mes !== undefined) {
+        cards.push(tile('Projeção do mês', R$(d.projecao_mes),
+          'loja + obras · média ' + R$(d.media_dia) + '/dia', ''));
+      }
       cards.push(tile('Lucro bruto do mês', R$(d.lucro_mes), 'venda menos custo da mercadoria', 'verde'));
     }
     if (d.despesa_mes !== undefined) {
-      cards.push(tile('Despesas pagas no mês', R$(d.despesa_mes), 'contas quitadas',
+      cards.push(tile('Despesas pagas no mês', R$(d.despesa_mes), 'pago das contas do mês',
         d.despesa_mes > 0 ? 'laranja' : ''));
     }
-    if (d.resultado_mes !== undefined) {
-      cards.push(tile('Resultado do mês', R$(d.resultado_mes),
-        d.resultado_mes >= 0 ? 'lucro menos despesas' : 'no vermelho',
-        d.resultado_mes >= 0 ? 'verde' : 'vermelho'));
-    }
-    if (d.orcamentos !== undefined && d.orcamentos.qtd > 0) {
-      cards.push(tile('Orçamentos em aberto', d.orcamentos.qtd,
-        R$(d.orcamentos.valor) + ' aguardando resposta', 'laranja'));
-    }
-    if (d.receber !== undefined) {
-      cards.push(tile('A receber (crediário)', R$(d.receber),
-        d.vencidos.qtd + ' parcela(s) vencida(s)', d.vencidos.valor > 0 ? 'vermelho' : ''));
-    }
-    if (d.cartao !== undefined) {
-      cards.push(tile('A receber (cartão)', R$(d.cartao), d.cartao_qtd + ' parcela(s) da maquininha', ''));
-    }
-    if (d.pagar !== undefined) {
-      cards.push(tile('A pagar', R$(d.pagar), d.pagar_vencidas.qtd + ' conta(s) vencida(s)',
-        d.pagar_vencidas.valor > 0 ? 'vermelho' : ''));
+    if (d.fiado !== undefined && (d.fiado.valor > 0 || d.fiado.qtd > 0)) {
+      cards.push(tile('A receber (fiado)', R$(d.fiado.valor),
+        d.fiado.qtd + ' em aberto', d.fiado.valor > 0 ? 'laranja' : ''));
     }
     if (d.caixa !== undefined) {
       cards.push(tile('Caixa', d.caixa_aberto ? 'ABERTO' : 'FECHADO',
@@ -422,15 +414,9 @@ async function carregarDashboard() {
         d.caixa_aberto ? 'verde' : 'laranja'));
     }
     if (d.entregas !== undefined && podeVer('expedicao')) {
-      cards.push(tile('Entregas a fazer', d.entregas.abertas,
-        R$(d.entregas.valor) + (d.entregas.atrasadas ? ` · ${d.entregas.atrasadas} atrasada(s)` : ' em mercadoria vendida'),
-        d.entregas.atrasadas ? 'vermelho' : (d.entregas.abertas ? 'laranja' : '')));
+      // card "Entregas a fazer" tirado do painel; o número continua no menu (badge)
       const bd = el('badgeEntregas');
       if (bd) { bd.textContent = d.entregas.abertas; bd.style.display = d.entregas.abertas ? '' : 'none'; }
-    }
-    if (d.estoque !== undefined) {
-      cards.push(tile('Estoque (custo)', R$(d.estoque.valor), d.estoque.produtos + ' produtos ativos', ''));
-      cards.push(tile('Estoque baixo', d.criticos, 'produtos no mínimo', d.criticos > 0 ? 'laranja' : ''));
     }
     el('dashTiles').innerHTML = cards.join('');
 

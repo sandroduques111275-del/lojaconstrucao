@@ -50,7 +50,9 @@ async function carregarPagar() {
     CP_CONTAS = r.contas || [];
     CP_TOTAIS = r.totais || {};
 
+    const cpTotalGeral = (Number(CP_TOTAIS.em_aberto) || 0) + (Number(CP_TOTAIS.pago) || 0);
     el('cpTotais').innerHTML = `
+      ${tile('Total do filtro', R$(cpTotalGeral), 'pago ' + R$(CP_TOTAIS.pago) + ' · a pagar ' + R$(CP_TOTAIS.em_aberto), '')}
       ${tile('Em aberto', R$(CP_TOTAIS.em_aberto), 'total a pagar no filtro', '')}
       ${tile('Vencidas', R$(CP_TOTAIS.vencidas), CP_TOTAIS.qtd_vencidas + ' conta(s) em atraso',
         CP_TOTAIS.vencidas > 0 ? 'vermelho' : 'verde')}
@@ -123,9 +125,10 @@ function cpThead() {
 const CP_PILL = { pago: 'verde', vencido: 'vermelha', vence_hoje: 'amarela', aberto: 'azul' };
 const CP_ROT = { pago: 'pago', vencido: 'vencida', vence_hoje: 'vence hoje', aberto: 'em aberto' };
 
-/** Uma linha de conta (11 colunas). */
+/** Uma linha de conta (11 colunas). Clicar na linha abre os dados para pagamento. */
 function cpLinha(c) {
-  return `<tr>
+  const p = 'event.stopPropagation();';   // nos botões: não abrir os dados ao clicar neles
+  return `<tr class="cp-clicavel" style="cursor:pointer" onclick="verDadosPagamento(${c.id})" title="Clique para ver os dados de pagamento">
     <td style="white-space:nowrap;${c.status === 'vencido' ? 'color:var(--vermelho);font-weight:700' : ''}">${dataBr(c.vencimento)}</td>
     <td class="centro">${c.status === 'vencido' ? c.dias + ' d' : '—'}</td>
     <td><strong>${esc(c.fornecedor || '—')}</strong></td>
@@ -135,19 +138,55 @@ function cpLinha(c) {
       ${c.forma_prevista === 'BOLETO' ? '<span class="pill cinza">boleto</span>' : ''}</td>
     <td style="font-size:12px">${esc(c.categoria || '—')}</td>
     <td>${esc(c.documento || '—')}
-      ${c.tem_boleto ? `<button class="btn-ic" onclick='verBoleto(${c.id})' title="Ver boleto">📎</button>` : ''}</td>
+      ${c.tem_boleto ? `<button class="btn-ic" onclick='${p}verBoleto(${c.id})' title="Ver boleto">📎</button>` : ''}</td>
     <td class="num">${N(c.valor)}</td>
     <td class="num">${Number(c.valor_pago) > 0 ? N(c.valor_pago) : '—'}</td>
     <td class="num"><strong>${c.status === 'pago' ? '—' : N(c.saldo)}</strong></td>
     <td class="centro"><span class="pill ${CP_PILL[c.status]}">${CP_ROT[c.status]}</span></td>
     <td class="centro" style="white-space:nowrap">
       ${c.status !== 'pago'
-        ? `<button class="btn pequeno verde" onclick='abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
-           <button class="btn-ic" onclick="abrirConta(${c.id})" title="Editar">✏️</button>`
-        : `<button class="btn-ic" onclick="estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
-      <button class="btn-ic" onclick="excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
+        ? `<button class="btn pequeno verde" onclick='${p}abrirPagarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})'>💸 Pagar</button>
+           <button class="btn-ic" onclick="${p}abrirConta(${c.id})" title="Editar">✏️</button>`
+        : `<button class="btn-ic" onclick="${p}estornarConta(${c.id})" title="Estornar pagamento">↺</button>`}
+      <button class="btn-ic" onclick='${p}duplicarConta(${JSON.stringify(c).replace(/'/g, "&#39;")})' title="Duplicar esta conta">⧉</button>
+      <button class="btn-ic" onclick="${p}excluirConta(${c.id}, ${c.total_parcelas > 1 ? 1 : 0})" title="Excluir">🗑️</button>
     </td></tr>`;
 }
+
+/** Modal "Dados para pagamento": abre ao clicar na linha da conta. Mostra o
+ *  código de barras do boleto, os dados do PIX e o boleto anexado, com Copiar. */
+let DP_CONTA = null;
+function verDadosPagamento(id) {
+  const c = (typeof CP_CONTAS !== 'undefined' ? CP_CONTAS : []).find((x) => x.id === id);
+  if (!c) return;
+  DP_CONTA = c;
+  const pix = txtPix(c);
+  let h = `<div style="background:#f5f7fa;border-radius:6px;padding:11px;font-size:13.5px;line-height:1.8">
+      <div><strong>${esc(c.fornecedor || c.descricao || 'Conta')}</strong></div>
+      ${c.descricao && c.fornecedor ? `<div>${esc(c.descricao)}</div>` : ''}
+      <div>${c.documento ? 'Documento ' + esc(c.documento) + ' • ' : ''}venc. ${dataBr(c.vencimento)}
+        ${c.status === 'vencido' ? `<span class="pill vermelha">${c.dias} dias em atraso</span>` : ''}</div>
+      <div style="margin-top:5px;font-size:16px"><strong>Saldo: ${R$(c.saldo)}</strong></div>
+    </div>`;
+  if (c.boleto_linha) h += `<div style="margin-top:10px;background:#eef2f7;border-radius:6px;padding:9px 11px">
+      <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">📶 Código de barras do boleto</div>
+      <div style="word-break:break-all;font-variant-numeric:tabular-nums;font-size:15px">${esc(c.boleto_linha)}</div>
+      <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(c.boleto_linha).replace(/'/g, "\\'")}')">Copiar código de barras</button></div>`;
+  if (pix) h += `<div style="margin-top:10px;background:#eef2f7;border-radius:6px;padding:9px 11px">
+      <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">🔑 Dados do PIX</div>
+      <div style="word-break:break-all;font-size:15px">${esc(pix)}</div>
+      <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(pix).replace(/'/g, "\\'")}')">Copiar dados do PIX</button></div>`;
+  if (c.tem_boleto) h += `<div style="margin-top:10px"><button class="btn" onclick="verBoleto(${c.id})">📎 Ver boleto (PDF/foto)</button></div>`;
+  if (!c.boleto_linha && !pix && !c.tem_boleto) h += `<div class="aviso info" style="margin-top:10px"><span>ℹ️</span>
+      <div>Essa conta não tem boleto nem PIX cadastrado. Clique em Pagar para pagar, ou no ✏️ (Editar) para anexar o boleto ou os dados do PIX.</div></div>`;
+  h += `<div class="modal-acoes" style="margin-top:14px">
+      <button class="btn" onclick="fecharModal('modalDadosPagto')">Fechar</button>
+      ${c.status !== 'pago' ? `<button class="btn verde" onclick="pagarDosDados()">💸 Pagar</button>` : ''}
+    </div>`;
+  el('dpCorpo').innerHTML = h;
+  abrirModal('modalDadosPagto');
+}
+function pagarDosDados() { fecharModal('modalDadosPagto'); if (DP_CONTA) abrirPagarConta(DP_CONTA); }
 
 /** Desenha a tabela a partir de CP_CONTAS, respeitando ordenação e agrupamento. */
 function renderPagar() {
@@ -157,6 +196,8 @@ function renderPagar() {
   }
 
   const somaValor = CP_CONTAS.reduce((s, c) => s + Number(c.valor), 0);
+  const somaPago = CP_CONTAS.reduce((s, c) => s + Number(c.valor_pago || 0), 0);
+  const somaSaldo = CP_CONTAS.reduce((s, c) => s + (c.status === 'pago' ? 0 : Number(c.saldo || 0)), 0);
   let corpo;
 
   if (!CP_AGRUPAR) {
@@ -199,8 +240,8 @@ function renderPagar() {
     <tfoot><tr>
       <td colspan="6">${CP_CONTAS.length} conta(s)${CP_AGRUPAR ? ' em ' + new Set(CP_CONTAS.map((c) => c.fornecedor || '—')).size + ' fornecedor(es)' : ''}</td>
       <td class="num">${N(somaValor)}</td>
-      <td class="num">${N(CP_TOTAIS.pago)}</td>
-      <td class="num">${N(CP_TOTAIS.em_aberto)}</td>
+      <td class="num">${N(somaPago)}</td>
+      <td class="num">${N(somaSaldo)}</td>
       <td colspan="2"></td>
     </tr></tfoot></table>`;
 }
@@ -208,7 +249,7 @@ function renderPagar() {
 async function abrirConta(id) {
   if (!CP_CATEGORIAS.length) await carregarCategoriasCp();
 
-  ['cp_fornecedor_busca', 'cp_descricao', 'cp_documento', 'cp_valor', 'cp_observacao', 'cp_pix_dados']
+  ['cp_fornecedor_busca', 'cp_descricao', 'cp_documento', 'cp_valor', 'cp_observacao', 'cp_pix_dados', 'cp_boleto_linha']
     .forEach((c) => setVal(c, ''));
   setVal('cp_id', '');
   setVal('cp_fornecedor_id', '');
@@ -244,6 +285,7 @@ async function abrirConta(id) {
       setVal('cp_observacao', c.observacao || '');
       setVal('cp_forma_prevista', c.forma_prevista || '');
       setVal('cp_pix_dados', c.pix_dados || '');
+      setVal('cp_boleto_linha', c.boleto_linha || '');
       aplicarFormaPrevista();
       if (c.tem_boleto && el('cp_boleto_atual')) {
         el('cp_boleto_atual').innerHTML = `✅ boleto anexado —
@@ -259,6 +301,35 @@ async function abrirConta(id) {
 
   abrirModal('modalConta');
   setTimeout(() => el('cp_fornecedor_busca').focus(), 100);
+}
+
+/* [1.18] Duplicar uma conta: abre o "Lançar conta" já preenchido com os dados
+   dela, mas como conta NOVA (sem id), com o vencimento jogado para o próximo
+   mês. O usuário confere, ajusta e salva. Não copia o arquivo do boleto. */
+async function duplicarConta(c) {
+  await abrirConta();                 // abre em branco (modo "nova conta")
+  setVal('cp_id', '');                // garante que salva como NOVA
+  setVal('cp_fornecedor_id', c.fornecedor_id || '');
+  setVal('cp_fornecedor_busca', c.fornecedor || '');
+  setVal('cp_categoria_id', c.categoria_id || '');
+  setVal('cp_descricao', c.descricao || '');
+  setVal('cp_documento', c.documento || '');
+  setVal('cp_valor', Number(c.valor || 0).toFixed(2));
+  setVal('cp_emissao', hojeIso());
+  // próximo mês a partir do vencimento atual (para contas que se repetem)
+  setVal('cp_vencimento', somaDias((c.vencimento ? String(c.vencimento).slice(0, 10) : hojeIso()), 30));
+  setVal('cp_parcelas', '1');
+  setVal('cp_intervalo', '30');
+  setVal('cp_forma_prevista', c.forma_prevista || '');
+  setVal('cp_pix_dados', c.pix_dados || '');
+  setVal('cp_boleto_linha', c.boleto_linha || '');
+  aplicarFormaPrevista();
+  if (el('cp_boleto_atual')) el('cp_boleto_atual').innerHTML = '';   // boleto não é copiado
+  if (el('cp_forn_sel')) el('cp_forn_sel').textContent = '';
+  el('cp_linha_parcelas').style.display = 'flex';
+  el('contaTitulo').textContent = 'Duplicar conta a pagar';
+  el('cp_preview').innerHTML = '';
+  setTimeout(() => { if (el('cp_vencimento')) el('cp_vencimento').focus(); }, 120);
 }
 
 let timerForn = null;
@@ -354,6 +425,7 @@ function somarPrazoJs(iso, dias) {
 function aplicarFormaPrevista() {
   const f = val('cp_forma_prevista');
   if (el('cp_boleto_box')) el('cp_boleto_box').style.display = f === 'BOLETO' ? '' : 'none';
+  if (el('cp_boleto_linha_box')) el('cp_boleto_linha_box').style.display = f === 'BOLETO' ? '' : 'none';
   if (el('cp_pix_box')) el('cp_pix_box').style.display = f === 'PIX' ? '' : 'none';
 }
 
@@ -409,7 +481,8 @@ async function salvarConta() {
         intervalo_dias: parseInt(val('cp_intervalo')) || 30,
         observacao: val('cp_observacao'),
         forma_prevista: val('cp_forma_prevista'),
-        pix_dados: val('cp_pix_dados')
+        pix_dados: val('cp_pix_dados'),
+        boleto_linha: val('cp_boleto_linha')
       }
     });
     // [1.16] anexa o boleto, se escolhido (na conta editada, ou na 1ª parcela da nova)
@@ -432,7 +505,7 @@ function abrirPagarConta(c) {
   setVal('pgJuros', '0');
   setVal('pgDesconto', '0');
   setVal('pgValor', Number(c.saldo).toFixed(2));
-  setVal('pgForma', 'DINHEIRO');
+  if (el('pgSaiCaixa')) el('pgSaiCaixa').checked = false;
   setVal('pgObs', '');
   el('pgInfo').innerHTML = `
     <div style="background:#f5f7fa;border-radius:6px;padding:11px;font-size:13.5px;line-height:1.8">
@@ -447,10 +520,13 @@ function abrirPagarConta(c) {
         <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">🔑 Dados do PIX</div>
         <div style="word-break:break-all">${esc(txtPix(c))}</div>
         <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(txtPix(c)).replace(/'/g, "\\'")}')">Copiar</button></div>` : ''}
+      ${c.boleto_linha ? `<div style="margin-top:7px;background:#eef2f7;border-radius:6px;padding:8px 10px">
+        <div style="font-size:11px;color:var(--texto-fraco);text-transform:uppercase;font-weight:700">📶 Código de barras do boleto</div>
+        <div style="word-break:break-all;font-variant-numeric:tabular-nums">${esc(c.boleto_linha)}</div>
+        <button class="btn pequeno" style="margin-top:6px" onclick="copiarPix('${esc(c.boleto_linha).replace(/'/g, "\\'")}')">Copiar</button></div>` : ''}
       ${c.tem_boleto ? `<div style="margin-top:7px"><button class="btn" onclick="verBoleto(${c.id})">📎 Ver boleto</button></div>` : ''}
     </div>`;
   el('modalPagarConta').dataset.saldo = c.saldo;
-  mostrarSairCaixa();
   abrirModal('modalPagarConta');
   setTimeout(() => el('pgValor').select(), 100);
 }
@@ -468,9 +544,7 @@ function recalcPagarConta() {
   setVal('pgValor', Math.max(0, saldo + juros - desc).toFixed(2));
 }
 
-function mostrarSairCaixa() {
-  el('pgSairCaixa').style.display = val('pgForma') === 'DINHEIRO' ? 'block' : 'none';
-}
+// campo "Forma" removido do pagar conta — a caixinha "tirar do caixa" controla a sangria
 
 async function salvarPagarConta() {
   try {
@@ -480,8 +554,8 @@ async function salvarPagarConta() {
         valor: valor(el('pgValor').value),
         juros: valor(el('pgJuros').value),
         desconto: valor(el('pgDesconto').value),
-        forma: val('pgForma'),
-        sair_do_caixa: val('pgForma') === 'DINHEIRO' && el('pgSaiCaixa').checked,
+        forma: 'DINHEIRO',
+        sair_do_caixa: el('pgSaiCaixa').checked,
         observacao: val('pgObs')
       }
     });
