@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.31 - Unir produtos duplicados';
+const VERSAO = '1.32 - Vendas do Dia: filtro por periodo (semana/mes)';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -5001,8 +5001,11 @@ function sugestaoCompra(q) {
    obras), por produto. O material que saiu para as obras conta como venda do
    dia pelo valor que o dono paga (o custo da saida). */
 app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
-  const dia = txt(req.query.dia) || hoje();
-  const ateDia = dia + 'T23:59:59';
+  // [1.32] periodo: aceita de/ate (hoje, semana, mes, mes anterior). Sem eles,
+  // cai no comportamento antigo de um dia so (?dia=), para nao quebrar nada.
+  const de = txt(req.query.de) || txt(req.query.dia) || hoje();
+  const ate = txt(req.query.ate) || de;
+  const ateFim = ate + 'T23:59:59';
 
   // produtos vendidos no caixa (vendas finalizadas do dia) — a preco de venda
   const itensVenda = all(`
@@ -5010,25 +5013,25 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
            SUM(i.quantidade) AS qtd, SUM(i.total) AS total, SUM(i.custo * i.quantidade) AS custo
     FROM venda_itens i JOIN vendas v ON v.id = i.venda_id
     WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
-    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [dia, ateDia]);
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [de, ateFim]);
 
   const totVendas = one(`SELECT COUNT(*) AS cupons, COALESCE(SUM(total),0) AS total,
            COALESCE(SUM(desconto),0) AS desconto
-    FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?`, [dia, ateDia]);
+    FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?`, [de, ateFim]);
 
   const pagamentos = all(`SELECT p.forma, COALESCE(SUM(p.valor),0) AS valor, COUNT(*) AS qtd
     FROM venda_pagamentos p JOIN vendas v ON v.id = p.venda_id
     WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
-    GROUP BY p.forma ORDER BY valor DESC`, [dia, ateDia]);
+    GROUP BY p.forma ORDER BY valor DESC`, [de, ateFim]);
 
   // quanto cada vendedor vendeu no dia (caixa)
   const vendedores = all(`SELECT COALESCE(NULLIF(TRIM(vendedor),''),'—') AS vendedor,
            COUNT(*) AS cupons, COALESCE(SUM(total),0) AS total
     FROM vendas WHERE situacao='finalizada' AND data >= ? AND data <= ?
-    GROUP BY COALESCE(NULLIF(TRIM(vendedor),''),'—') ORDER BY total DESC`, [dia, ateDia]);
+    GROUP BY COALESCE(NULLIF(TRIM(vendedor),''),'—') ORDER BY total DESC`, [de, ateFim]);
 
   // [1.26] fiados lançados no dia (a receber rápido)
-  const fiadosDia = all(`SELECT * FROM fiados WHERE data = ? ORDER BY situacao, id DESC`, [dia]);
+  const fiadosDia = all(`SELECT * FROM fiados WHERE data >= ? AND data <= ? ORDER BY situacao, id DESC`, [de, ate]);
   const fiadoAberto = round2(fiadosDia.filter((f) => f.situacao !== 'recebido')
     .reduce((s, f) => s + (num(f.valor) - num(f.valor_recebido)), 0));
 
@@ -5037,11 +5040,11 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
     SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
            SUM(i.quantidade) AS qtd, SUM(i.total) AS total
     FROM obra_saida_itens i JOIN obra_saidas s ON s.id = i.saida_id
-    WHERE s.data = ?
-    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [dia]);
+    WHERE s.data >= ? AND s.data <= ?
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [de, ate]);
   const obrasPorNome = all(`SELECT o.nome, COALESCE(SUM(s.total),0) AS total, COUNT(*) AS saidas
-    FROM obra_saidas s JOIN obras o ON o.id = s.obra_id WHERE s.data = ?
-    GROUP BY o.nome ORDER BY total DESC`, [dia]);
+    FROM obra_saidas s JOIN obras o ON o.id = s.obra_id WHERE s.data >= ? AND s.data <= ?
+    GROUP BY o.nome ORDER BY total DESC`, [de, ate]);
 
   // junta os produtos das duas origens
   const mapa = new Map();
@@ -5066,7 +5069,7 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
   const obrasTotal = round2(itensObra.reduce((s, i) => s + num(i.total), 0));
 
   res.json({
-    dia,
+    de, ate, dia: de,
     caixa: {
       total: caixaTotal, custo: caixaCusto, lucro: round2(caixaTotal - caixaCusto),
       cupons: totVendas ? totVendas.cupons : 0, desconto: round2(totVendas ? totVendas.desconto : 0)
