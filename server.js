@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.30 - Curva ABC: agrupar por fornecedor';
+const VERSAO = '1.31 - Unir produtos duplicados';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -3204,6 +3204,66 @@ app.delete('/api/produtos/:id', auth, (req, res) => {
   salvarBanco();
   registrarLog(req.usuario.usuario, 'produto-excluir', `#${req.params.id}`);
   res.json({ ok: true });
+});
+
+/* [1.31] UNIR produtos: funde um produto duplicado (o do :id) em outro
+   (manter_id). Todo o historico — vendas, orcamentos, entradas, saidas de
+   obra, entregas e movimentos de estoque — passa para o produto que fica;
+   o estoque soma; o duplicado e apagado. Os itens ja lancados adotam o
+   codigo/descricao/unidade do que fica, para o ranking e os relatorios
+   juntarem tudo numa linha so. Nao tem como desfazer. */
+app.post('/api/produtos/:id/unir', auth, (req, res) => {
+  const idDup = Number(req.params.id);
+  const idFica = Number(req.body.manter_id);
+  if (!idFica) return res.status(400).json({ erro: 'Escolha o produto que vai ficar.' });
+  if (idDup === idFica) return res.status(400).json({ erro: 'Escolha dois produtos diferentes.' });
+
+  const dup = one('SELECT * FROM produtos WHERE id = ?', [idDup]);
+  const fica = one('SELECT * FROM produtos WHERE id = ?', [idFica]);
+  if (!dup) return res.status(404).json({ erro: 'Produto a unir nao encontrado.' });
+  if (!fica) return res.status(404).json({ erro: 'Produto que fica nao encontrado.' });
+
+  // os itens ja lancados passam a usar o codigo/descricao/unidade do que fica,
+  // para o ranking e os relatorios juntarem tudo numa linha so
+  const cod = fica.codigo, desc = fica.descricao, un = fica.unidade;
+  const cont = (tabela) =>
+    ((one(`SELECT COUNT(*) AS n FROM ${tabela} WHERE produto_id = ?`, [idDup]) || {}).n) || 0;
+  const nVendas = cont('venda_itens');
+  const nOrc = cont('orcamento_itens');
+  const nObra = cont('obra_saida_itens');
+  const nEnt = cont('entrega_itens');
+  const nMov = cont('estoque_mov');
+
+  run('UPDATE venda_itens     SET produto_id = ?, codigo = ?, descricao = ?, unidade = ? WHERE produto_id = ?', [idFica, cod, desc, un, idDup]);
+  run('UPDATE orcamento_itens SET produto_id = ?, codigo = ?, descricao = ?, unidade = ? WHERE produto_id = ?', [idFica, cod, desc, un, idDup]);
+  run('UPDATE obra_saida_itens SET produto_id = ?, codigo = ?, descricao = ?, unidade = ? WHERE produto_id = ?', [idFica, cod, desc, un, idDup]);
+  run('UPDATE entrega_itens    SET produto_id = ?, codigo = ?, descricao = ?, unidade = ? WHERE produto_id = ?', [idFica, cod, desc, un, idDup]);
+  // entrada_itens guarda o codigo/descricao do fornecedor na nota — so troca o vinculo
+  run('UPDATE entrada_itens    SET produto_id = ? WHERE produto_id = ?', [idFica, idDup]);
+  // movimentos de estoque passam junto (o kardex do que fica conta a mercadoria toda)
+  run('UPDATE estoque_mov      SET produto_id = ? WHERE produto_id = ?', [idFica, idDup]);
+
+  // soma o estoque e remove o duplicado do cadastro
+  const estoqueFinal = round2(num(fica.estoque) + num(dup.estoque));
+  run('UPDATE produtos SET estoque = ?, atualizado_em = ? WHERE id = ?', [estoqueFinal, agora(), idFica]);
+  run('DELETE FROM produtos WHERE id = ?', [idDup]);
+
+  salvarBanco();
+  registrarLog(req.usuario.usuario, 'produto-unir',
+    `#${idDup} ${dup.codigo} "${dup.descricao}" -> #${idFica} ${fica.codigo} "${fica.descricao}" ` +
+    `(estoque ${num(dup.estoque)}+${num(fica.estoque)}=${estoqueFinal}; ${nVendas} itens de venda)`);
+  res.json({
+    ok: true,
+    manter_id: idFica,
+    codigo: fica.codigo,
+    descricao: fica.descricao,
+    estoque_final: estoqueFinal,
+    vendas_movidas: nVendas,
+    orcamentos_movidos: nOrc,
+    obras_movidas: nObra,
+    entregas_movidas: nEnt,
+    movimentos_movidos: nMov
+  });
 });
 
 /** Reajuste de preco em lote (por categoria ou geral). */
