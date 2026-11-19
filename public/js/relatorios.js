@@ -73,6 +73,18 @@ async function carregarVendasDia() {
         </table></div>
       </div>
 
+      <div class="card"><h3>🚚 Por fornecedor — quanto saiu de cada um</h3>
+        <div class="tabela-wrap"><table>
+          <thead><tr><th>Fornecedor</th><th class="num">Valor</th><th style="width:160px">Participação</th></tr></thead>
+          <tbody>${(d.por_fornecedor || []).map((f) => {
+            const pc = d.total_dia ? (Number(f.total) / d.total_dia) * 100 : 0;
+            return `<tr><td><strong>${esc(f.nome)}</strong></td><td class="num"><strong>${N(f.total)}</strong></td><td>${barra(pc)}<small>${pc.toFixed(1)}%</small></td></tr>`;
+          }).join('') || `<tr><td colspan="3" class="centro" style="padding:16px">Nada nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}
+          </tbody>
+          <tfoot><tr><td><strong>Total</strong></td><td class="num"><strong>${R$(d.total_dia)}</strong></td><td></td></tr></tfoot>
+        </table></div>
+      </div>
+
       <div class="grid g2">
         <div class="card"><h3>💳 Como foi pago (caixa)</h3>
           <div class="tabela-wrap"><table>
