@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.32 - Vendas do Dia: filtro por periodo (semana/mes)';
+const VERSAO = '1.33 - Curva ABC com obras + Vendas do Dia separa loja/obra';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -4820,6 +4820,40 @@ app.get('/api/relatorios/produtos', auth, (req, res) => {
     WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
     GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade, c.nome, p.fornecedor
     ORDER BY total DESC`, [de, ate]);
+
+  // [1.33] opcao "incluir obras": junta o material que saiu pras obras (a custo)
+  // no mesmo ranking, para bater com o "Vendas do Dia" (tudo que saiu). Como a
+  // obra sai a custo, o faturamento dela = custo (lucro 0) — nao infla a margem.
+  if (txt(req.query.incluir_obras) === '1') {
+    const ateDia = ate.slice(0, 10);   // obra_saidas.data e data plana (sem hora)
+    const obra = all(`
+      SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
+             SUM(i.quantidade) AS qtd, SUM(i.total) AS total,
+             c.nome AS categoria, p.fornecedor AS fornecedor
+      FROM obra_saida_itens i
+      JOIN obra_saidas s ON s.id = i.saida_id
+      LEFT JOIN produtos p ON p.id = i.produto_id
+      LEFT JOIN categorias c ON c.id = p.categoria_id
+      WHERE s.data >= ? AND s.data <= ?
+      GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade, c.nome, p.fornecedor`, [de, ateDia]);
+    const chave = (i) => [i.produto_id, i.codigo, i.descricao, i.unidade].join('|');
+    const mapa = new Map(lista.map((i) => [chave(i), i]));
+    obra.forEach((o) => {
+      const ex = mapa.get(chave(o));
+      if (ex) {
+        ex.qtd = num(ex.qtd) + num(o.qtd);
+        ex.total = num(ex.total) + num(o.total);
+        ex.custo = num(ex.custo) + num(o.total);   // obra a custo: faturamento = custo
+      } else {
+        const novo = { produto_id: o.produto_id, codigo: o.codigo, descricao: o.descricao,
+          unidade: o.unidade, qtd: num(o.qtd), total: num(o.total), custo: num(o.total),
+          categoria: o.categoria, fornecedor: o.fornecedor };
+        mapa.set(chave(o), novo);
+        lista.push(novo);
+      }
+    });
+    lista.sort((a, b) => num(b.total) - num(a.total));   // a obra pode mudar o ranking
+  }
 
   const geral = lista.reduce((s, i) => s + num(i.total), 0);
   let acumulado = 0;
