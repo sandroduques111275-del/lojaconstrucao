@@ -661,9 +661,10 @@
         </div>
         <div class="card">
           <div class="atalhos" style="margin-bottom:12px" id="atalhosRelProd"></div>
-          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0;flex-wrap:wrap;gap:8px">
             <div class="campo m"><label>De</label><input type="date" id="relPDe"></div>
             <div class="campo m"><label>Até</label><input type="date" id="relPAte"></div>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;padding-bottom:6px"><input type="checkbox" id="relPIncluirObras" onchange="carregarRelProdutos()"> 🏗️ Incluir obras</label>
             <button class="btn primario" onclick="carregarRelProdutos()">🔍 Gerar</button>
           </div>
         </div>

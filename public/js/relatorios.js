@@ -52,12 +52,12 @@ async function carregarVendasDia() {
 
       <div class="card"><h3>📦 Produtos que saíram ${quando}</h3>
         <div class="tabela-wrap"><table>
-          <thead><tr><th>Produto</th><th class="centro">Un.</th><th class="num">Qtd.</th>
+          <thead><tr><th>Produto</th><th class="centro">Un.</th><th class="num">${temObra ? 'Qtd. loja' : 'Qtd.'}</th>
             ${temObra ? '<th class="num">Qtd. obra</th>' : ''}<th class="num">Valor</th></tr></thead>
           <tbody>${d.produtos.map((p) => `<tr>
             <td><strong>${esc(p.descricao)}</strong>${p.qtd_obra > 0 ? ' <span title="inclui material que foi para obra">🏗️</span>' : ''}</td>
             <td class="centro">${esc(p.unidade || '')}</td>
-            <td class="num">${Q(p.qtd)}</td>
+            <td class="num">${temObra ? (p.qtd_caixa > 0 ? Q(p.qtd_caixa) : '—') : Q(p.qtd)}</td>
             ${temObra ? `<td class="num">${p.qtd_obra > 0 ? Q(p.qtd_obra) : '—'}</td>` : ''}
             <td class="num"><strong>${N(p.valor)}</strong></td>
           </tr>`).join('') || `<tr><td colspan="${cols}" class="centro" style="padding:22px">Nada vendido nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}
@@ -222,7 +222,8 @@ async function carregarRelVendas() {
 /* ---------------- produtos / curva ABC ---------------- */
 async function carregarRelProdutos() {
   try {
-    const r = await api(`/api/relatorios/produtos?de=${val('relPDe')}&ate=${val('relPAte')}`);
+    const comObras = !!(el('relPIncluirObras') && el('relPIncluirObras').checked);
+    const r = await api(`/api/relatorios/produtos?de=${val('relPDe')}&ate=${val('relPAte')}` + (comObras ? '&incluir_obras=1' : ''));
     const corCurva = { A: 'verde', B: 'amarela', C: 'cinza' };
 
     const contaA = r.produtos.filter((p) => p.curva === 'A').length;
@@ -230,8 +231,9 @@ async function carregarRelProdutos() {
     const contaC = r.produtos.filter((p) => p.curva === 'C').length;
 
     el('relProdutosSaida').innerHTML = `
+      ${comObras ? '<div class="aviso info" style="margin-bottom:12px"><span>🏗️</span><div>Incluindo o material que saiu pras <strong>obras</strong> (a preço de custo), pra bater com o Vendas do Dia. Desmarque <strong>Incluir obras</strong> para ver só as vendas da loja.</div></div>' : ''}
       <div class="grid g4" style="margin-bottom:16px">
-        ${tile('Faturamento', R$(r.total_geral), 'no período', 'verde')}
+        ${tile('Faturamento', R$(r.total_geral), comObras ? 'loja + obras (obra a custo)' : 'no período', 'verde')}
         ${tile('Produtos vendidos', r.produtos.length, 'itens diferentes', '')}
         ${tile('Curva A', contaA, 'geram até 80% da receita', 'verde')}
         ${tile('Curva B / C', contaB + ' / ' + contaC, 'giro médio e baixo', 'laranja')}
