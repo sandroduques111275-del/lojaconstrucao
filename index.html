@@ -619,14 +619,18 @@
       <!-- ============ VENDAS DO DIA (1.19) ============ -->
       <section class="secao" id="sec-relDia">
         <div class="cabecalho-secao">
-          <div><h2>Vendas do Dia</h2><div class="desc">Tudo que saiu no dia — caixa e obras — resumido por produto</div></div>
+          <div><h2>Vendas do Dia</h2><div class="desc">Tudo que saiu no período — caixa e obras — resumido por produto</div></div>
           <div class="acoes"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
         </div>
         <div class="card">
-          <div class="linha" style="align-items:flex-end;margin-bottom:0">
-            <div class="campo m"><label>Dia</label><input type="date" id="relDiaData" onchange="carregarVendasDia()"></div>
+          <div class="linha" style="align-items:flex-end;margin-bottom:0;flex-wrap:wrap;gap:8px">
+            <div class="campo m"><label>De</label><input type="date" id="relDiaData" onchange="carregarVendasDia()"></div>
+            <div class="campo m"><label>Até</label><input type="date" id="relDiaAte" onchange="carregarVendasDia()"></div>
             <button class="btn pequeno" onclick="relDiaHoje()">Hoje</button>
             <button class="btn pequeno" onclick="relDiaOntem()">Ontem</button>
+            <button class="btn pequeno" onclick="relDiaSemana()">Esta semana</button>
+            <button class="btn pequeno" onclick="relDiaMes()">Este mês</button>
+            <button class="btn pequeno" onclick="relDiaMesAnterior()">Mês anterior</button>
             <button class="btn primario" onclick="carregarVendasDia()">🔍 Ver</button>
           </div>
         </div>
@@ -657,9 +661,10 @@
         </div>
         <div class="card">
           <div class="atalhos" style="margin-bottom:12px" id="atalhosRelProd"></div>
-          <div class="linha" style="align-items:flex-end;margin-bottom:0">
+          <div class="linha" style="align-items:flex-end;margin-bottom:0;flex-wrap:wrap;gap:8px">
             <div class="campo m"><label>De</label><input type="date" id="relPDe"></div>
             <div class="campo m"><label>Até</label><input type="date" id="relPAte"></div>
+            <label style="display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;padding-bottom:6px"><input type="checkbox" id="relPIncluirObras" onchange="carregarRelProdutos()"> 🏗️ Incluir obras</label>
             <button class="btn primario" onclick="carregarRelProdutos()">🔍 Gerar</button>
           </div>
         </div>
@@ -1661,6 +1666,32 @@
     <div class="modal-acoes">
       <button class="btn" onclick="fecharModal('modalEstoque')">Cancelar</button>
       <button class="btn primario" onclick="salvarMovEstoque()">💾 Lançar</button>
+    </div>
+  </div>
+</div>
+
+<!-- unir produtos (juntar duplicados) -->
+<div class="modal" id="modalUnir">
+  <div class="modal-box">
+    <div class="modal-cab"><h3>⇄ Unir produtos</h3><button class="fechar" onclick="fecharModal('modalUnir')">×</button></div>
+    <div class="modal-corpo">
+      <div class="aviso info" style="margin-bottom:12px"><span>ℹ️</span><div>
+        Junta um produto <strong>duplicado</strong> em outro. O estoque soma, todo o histórico
+        (vendas, orçamentos e saídas de obra) passa pro que fica, e o código duplicado deixa de existir.</div></div>
+      <div class="campo" style="margin-bottom:12px">
+        <label>Produto que vai sumir (absorvido)</label>
+        <div class="dica" id="unirOrigem" style="padding:8px;border:1px solid var(--cinza-linha);border-radius:6px"></div>
+      </div>
+      <div class="campo" style="margin-bottom:12px">
+        <label>Juntar com — este é o que fica *</label>
+        <input id="unirBusca" placeholder="Digite o nome ou o código do produto que fica" oninput="buscarProdutoUnir()" autocomplete="off">
+        <div class="resultado-busca" id="unirResultado" style="max-height:200px;border:1px solid var(--cinza-linha);border-radius:6px;margin-top:5px;display:none"></div>
+      </div>
+      <div id="unirResumo"></div>
+    </div>
+    <div class="modal-acoes">
+      <button class="btn" onclick="fecharModal('modalUnir')">Cancelar</button>
+      <button class="btn perigo" id="btnUnir" onclick="confirmarUnir()" disabled>⇄ Juntar produtos</button>
     </div>
   </div>
 </div>
