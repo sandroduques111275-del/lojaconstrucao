@@ -37,6 +37,7 @@ async function carregarProdutos() {
           <td class="centro">${x.ativo ? '<span class="pill verde">ativo</span>' : '<span class="pill cinza">inativo</span>'}</td>
           <td class="centro" style="white-space:nowrap">
             <button class="btn-ic" onclick="abrirProduto(${x.id})" title="Editar">✏️</button>
+            ${podeVer('excluir') ? `<button class="btn-ic" onclick="abrirUnirProduto(${x.id})" title="Unir a outro produto (juntar duplicados)">⇄</button>` : ''}
             ${podeVer('excluir') ? `<button class="btn-ic" onclick="excluirProduto(${x.id}, '${esc(x.descricao).replace(/'/g, '')}')" title="Excluir">🗑️</button>` : ''}
           </td></tr>`;
       }).join('')}
@@ -167,6 +168,79 @@ async function excluirProduto(id, nome) {
     const r = await api('/api/produtos/' + id, { method: 'DELETE' });
     carregarProdutos();
     if (r.aviso) alerta(r.aviso); else ok('Produto excluído.');
+  } catch (e) { erro(e.message); }
+}
+
+/* ---------------- unir (juntar produtos duplicados) ---------------- */
+let UNIR_D = null;   // produto que vai sumir (absorvido)
+let UNIR_M = null;   // produto que fica
+let timerUnir = null;
+
+async function abrirUnirProduto(id) {
+  UNIR_D = null; UNIR_M = null;
+  try {
+    UNIR_D = await api('/api/produtos/' + id);
+  } catch (e) { erro(e.message); return; }
+  el('unirOrigem').innerHTML = `
+    <div class="nome"><strong>${esc(UNIR_D.descricao)}</strong></div>
+    <div class="sub" style="font-size:12px;color:var(--texto-fraco)">Cód. ${esc(UNIR_D.codigo)} • estoque ${Q(UNIR_D.estoque)} ${esc(UNIR_D.unidade)}</div>`;
+  setVal('unirBusca', '');
+  el('unirResultado').style.display = 'none';
+  el('unirResultado').innerHTML = '';
+  el('unirResumo').innerHTML = '';
+  el('btnUnir').disabled = true;
+  abrirModal('modalUnir');
+  setTimeout(() => el('unirBusca').focus(), 100);
+}
+
+function buscarProdutoUnir() {
+  clearTimeout(timerUnir);
+  timerUnir = setTimeout(async () => {
+    const t = val('unirBusca');
+    const c = el('unirResultado');
+    if (t.length < 2) { c.style.display = 'none'; return; }
+    try {
+      const lista = await api('/api/produtos/busca?q=' + encodeURIComponent(t));
+      const outros = lista.filter((p) => Number(p.id) !== Number(UNIR_D.id));
+      c.style.display = 'block';
+      c.innerHTML = outros.length ? outros.map((p) => `
+        <div class="item" onclick='escolherManter(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
+          <div class="d"><div class="nome">${esc(p.descricao)}</div>
+            <div class="sub">Cód. ${esc(p.codigo)} • saldo ${Q(p.estoque)} ${esc(p.unidade)}</div></div>
+          <div class="preco">${R$(p.preco_venda)}</div>
+        </div>`).join('')
+        : '<div class="vazio" style="padding:16px">Nenhum outro produto encontrado.</div>';
+    } catch (e) { erro(e.message); }
+  }, 200);
+}
+
+function escolherManter(p) {
+  UNIR_M = p;
+  setVal('unirBusca', p.descricao);
+  el('unirResultado').style.display = 'none';
+  const soma = Number(UNIR_D.estoque) + Number(p.estoque);
+  el('unirResumo').innerHTML = `
+    <div class="aviso alerta"><span>⚠️</span><div>
+      <strong>${esc(UNIR_D.descricao)}</strong> (cód. ${esc(UNIR_D.codigo)}) vai ser
+      <strong>juntado</strong> em <strong>${esc(p.descricao)}</strong> (cód. ${esc(p.codigo)}).<br>
+      • Estoque soma: ${Q(UNIR_D.estoque)} + ${Q(p.estoque)} = <strong>${Q(soma)} ${esc(p.unidade)}</strong><br>
+      • Vendas, orçamentos e saídas de obra do código <strong>${esc(UNIR_D.codigo)}</strong> passam pro <strong>${esc(p.codigo)}</strong><br>
+      • O código <strong>${esc(UNIR_D.codigo)}</strong> deixa de existir. <strong>Não tem como desfazer.</strong>
+    </div></div>`;
+  el('btnUnir').disabled = false;
+}
+
+async function confirmarUnir() {
+  if (!UNIR_D || !UNIR_M) { alerta('Escolha o produto que vai ficar.'); return; }
+  if (Number(UNIR_D.id) === Number(UNIR_M.id)) { alerta('Escolha dois produtos diferentes.'); return; }
+  if (!confirm(`Juntar "${UNIR_D.descricao}" em "${UNIR_M.descricao}"?\n\nO código ${UNIR_D.codigo} some e não tem como desfazer.`)) return;
+  try {
+    const r = await api('/api/produtos/' + UNIR_D.id + '/unir', {
+      method: 'POST', body: { manter_id: UNIR_M.id }
+    });
+    fecharModal('modalUnir');
+    carregarProdutos();
+    ok(`Pronto: ficou "${r.descricao}" (cód. ${r.codigo}), estoque ${Q(r.estoque_final)} • ${r.vendas_movidas} venda(s) migrada(s).`);
   } catch (e) { erro(e.message); }
 }
 
