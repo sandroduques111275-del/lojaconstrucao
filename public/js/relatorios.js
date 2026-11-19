@@ -40,7 +40,9 @@ async function carregarVendasDia() {
     const quando = umDia ? 'no dia' : 'no período';
     const periodoTxt = umDia ? dataBr(d.de) : (dataBr(d.de) + ' a ' + dataBr(d.ate));
     const temObra = d.obras.total > 0;
-    const cols = temObra ? 5 : 4;
+    const cols = temObra ? 6 : 4;
+    const totLoja = d.produtos.reduce((s, p) => s + Number(temObra ? (p.qtd_caixa || 0) : (p.qtd || 0)), 0);
+    const totObra = d.produtos.reduce((s, p) => s + Number(p.qtd_obra || 0), 0);
     el('relDiaSaida').innerHTML = `
       <div class="dica" style="margin-bottom:10px">📅 ${esc(periodoTxt)}</div>
       <div class="grid g4" style="margin-bottom:14px">
@@ -55,16 +57,19 @@ async function carregarVendasDia() {
       <div class="card"><h3>📦 Produtos que saíram ${quando}</h3>
         <div class="tabela-wrap"><table>
           <thead><tr><th>Produto</th><th class="centro">Un.</th><th class="num">${temObra ? 'Qtd. loja' : 'Qtd.'}</th>
-            ${temObra ? '<th class="num">Qtd. obra</th>' : ''}<th class="num">Valor</th></tr></thead>
+            ${temObra ? '<th class="num">Qtd. obra</th><th class="num">Qtd. total</th>' : ''}<th class="num">Valor</th></tr></thead>
           <tbody>${d.produtos.map((p) => `<tr>
             <td><strong>${esc(p.descricao)}</strong>${p.qtd_obra > 0 ? ' <span title="inclui material que foi para obra">🏗️</span>' : ''}</td>
             <td class="centro">${esc(p.unidade || '')}</td>
             <td class="num">${temObra ? (p.qtd_caixa > 0 ? Q(p.qtd_caixa) : '—') : Q(p.qtd)}</td>
-            ${temObra ? `<td class="num">${p.qtd_obra > 0 ? Q(p.qtd_obra) : '—'}</td>` : ''}
+            ${temObra ? `<td class="num">${p.qtd_obra > 0 ? Q(p.qtd_obra) : '—'}</td><td class="num"><strong>${Q(p.qtd)}</strong></td>` : ''}
             <td class="num"><strong>${N(p.valor)}</strong></td>
           </tr>`).join('') || `<tr><td colspan="${cols}" class="centro" style="padding:22px">Nada vendido nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}
           </tbody>
-          <tfoot><tr><td colspan="${cols - 1}" class="num">Total ${umDia ? 'do dia' : 'do período'}</td><td class="num">${R$(d.total_dia)}</td></tr></tfoot>
+          <tfoot><tr><td><strong>Total ${umDia ? 'do dia' : 'do período'}</strong></td><td></td>
+            <td class="num"><strong>${Q(totLoja)}</strong></td>
+            ${temObra ? `<td class="num"><strong>${Q(totObra)}</strong></td><td class="num"><strong>${Q(totLoja + totObra)}</strong></td>` : ''}
+            <td class="num"><strong>${R$(d.total_dia)}</strong></td></tr></tfoot>
         </table></div>
       </div>
 
