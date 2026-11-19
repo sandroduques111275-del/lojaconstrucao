@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.33 - Curva ABC com obras + Vendas do Dia separa loja/obra';
+const VERSAO = '1.34 - Vendas do Dia: botao incluir/excluir obras';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -5040,6 +5040,9 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
   const de = txt(req.query.de) || txt(req.query.dia) || hoje();
   const ate = txt(req.query.ate) || de;
   const ateFim = ate + 'T23:59:59';
+  // [1.34] "incluir obras": ligada (padrao) soma o material das obras, como
+  // sempre; so fica de fora quando vier incluir_obras=0 (ver so a loja/caixa).
+  const incluirObras = txt(req.query.incluir_obras) !== '0';
 
   // produtos vendidos no caixa (vendas finalizadas do dia) — a preco de venda
   const itensVenda = all(`
@@ -5069,16 +5072,17 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
   const fiadoAberto = round2(fiadosDia.filter((f) => f.situacao !== 'recebido')
     .reduce((s, f) => s + (num(f.valor) - num(f.valor_recebido)), 0));
 
-  // material que saiu para as obras no dia — valor = custo (o que o dono paga)
-  const itensObra = all(`
+  // material que saiu para as obras no dia — valor = custo (o que o dono paga).
+  // [1.34] so entra quando "incluir obras" esta ligado (padrao); senao, so loja.
+  const itensObra = incluirObras ? all(`
     SELECT i.produto_id, i.codigo, i.descricao, i.unidade,
            SUM(i.quantidade) AS qtd, SUM(i.total) AS total
     FROM obra_saida_itens i JOIN obra_saidas s ON s.id = i.saida_id
     WHERE s.data >= ? AND s.data <= ?
-    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [de, ate]);
-  const obrasPorNome = all(`SELECT o.nome, COALESCE(SUM(s.total),0) AS total, COUNT(*) AS saidas
+    GROUP BY i.produto_id, i.codigo, i.descricao, i.unidade`, [de, ate]) : [];
+  const obrasPorNome = incluirObras ? all(`SELECT o.nome, COALESCE(SUM(s.total),0) AS total, COUNT(*) AS saidas
     FROM obra_saidas s JOIN obras o ON o.id = s.obra_id WHERE s.data >= ? AND s.data <= ?
-    GROUP BY o.nome ORDER BY total DESC`, [de, ate]);
+    GROUP BY o.nome ORDER BY total DESC`, [de, ate]) : [];
 
   // junta os produtos das duas origens
   const mapa = new Map();
@@ -5103,7 +5107,7 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
   const obrasTotal = round2(itensObra.reduce((s, i) => s + num(i.total), 0));
 
   res.json({
-    de, ate, dia: de,
+    de, ate, dia: de, incluir_obras: incluirObras,
     caixa: {
       total: caixaTotal, custo: caixaCusto, lucro: round2(caixaTotal - caixaCusto),
       cupons: totVendas ? totVendas.cupons : 0, desconto: round2(totVendas ? totVendas.desconto : 0)
