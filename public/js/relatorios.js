@@ -32,8 +32,10 @@ async function carregarVendasDia() {
   if (!val('relDiaData')) setVal('relDiaData', hojeIso());
   if (!val('relDiaAte')) setVal('relDiaAte', val('relDiaData'));
   if (val('relDiaAte') < val('relDiaData')) setVal('relDiaAte', val('relDiaData'));
+  const incEl = el('relDiaIncluirObras');
+  const comObras = incEl ? incEl.checked : true;
   try {
-    const d = await api('/api/relatorios/vendas-dia?de=' + encodeURIComponent(val('relDiaData')) + '&ate=' + encodeURIComponent(val('relDiaAte')));
+    const d = await api('/api/relatorios/vendas-dia?de=' + encodeURIComponent(val('relDiaData')) + '&ate=' + encodeURIComponent(val('relDiaAte')) + '&incluir_obras=' + (comObras ? '1' : '0'));
     const umDia = d.de === d.ate;
     const quando = umDia ? 'no dia' : 'no período';
     const periodoTxt = umDia ? dataBr(d.de) : (dataBr(d.de) + ' a ' + dataBr(d.ate));
@@ -42,7 +44,7 @@ async function carregarVendasDia() {
     el('relDiaSaida').innerHTML = `
       <div class="dica" style="margin-bottom:10px">📅 ${esc(periodoTxt)}</div>
       <div class="grid g4" style="margin-bottom:14px">
-        ${tile(umDia ? 'Vendido no dia' : 'Vendido no período', R$(d.total_dia), 'caixa + obras', '')}
+        ${tile(umDia ? 'Vendido no dia' : 'Vendido no período', R$(d.total_dia), temObra ? 'caixa + obras' : 'só a loja', '')}
         ${tile('Caixa', R$(d.caixa.total), d.caixa.cupons + ' cupom(ns)', 'verde')}
         ${temObra
           ? tile('Obras', R$(d.obras.total), d.obras.saidas + ' saída(s), a custo', 'laranja')
