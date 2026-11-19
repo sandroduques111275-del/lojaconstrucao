@@ -9,19 +9,40 @@ function barra(percentual, cor = 'var(--laranja)') {
 }
 
 /* ---------------- vendas ---------------- */
-/* [1.19] Vendas do Dia — resumo do que saiu no dia (caixa + obras) por produto */
-function relDiaHoje() { setVal('relDiaData', hojeIso()); carregarVendasDia(); }
-function relDiaOntem() { setVal('relDiaData', somaDias(hojeIso(), -1)); carregarVendasDia(); }
+/* [1.19/1.32] Vendas do Dia — resumo do que saiu (caixa + obras) por produto.
+   Aceita um dia só OU um período: hoje, ontem, esta semana, este mês, mês
+   anterior — ou um intervalo De/Até escolhido na mão. */
+function relDiaPeriodo(de, ate) { setVal('relDiaData', de); setVal('relDiaAte', ate); carregarVendasDia(); }
+
+/* calcula [de, ate] (datas YYYY-MM-DD) para cada atalho, a partir de hoje (h) */
+function vdPeriodo(tipo, h) {
+  if (tipo === 'ontem') { const o = somaDias(h, -1); return [o, o]; }
+  if (tipo === 'semana') { const dow = new Date(h + 'T12:00:00').getDay(); return [somaDias(h, dow === 0 ? -6 : 1 - dow), h]; }
+  if (tipo === 'mes') return [h.slice(0, 8) + '01', h];
+  if (tipo === 'mesAnterior') { const ua = somaDias(h.slice(0, 8) + '01', -1); return [ua.slice(0, 8) + '01', ua]; }
+  return [h, h]; // hoje
+}
+function relDiaHoje() { const [de, ate] = vdPeriodo('hoje', hojeIso()); relDiaPeriodo(de, ate); }
+function relDiaOntem() { const [de, ate] = vdPeriodo('ontem', hojeIso()); relDiaPeriodo(de, ate); }
+function relDiaSemana() { const [de, ate] = vdPeriodo('semana', hojeIso()); relDiaPeriodo(de, ate); }
+function relDiaMes() { const [de, ate] = vdPeriodo('mes', hojeIso()); relDiaPeriodo(de, ate); }
+function relDiaMesAnterior() { const [de, ate] = vdPeriodo('mesAnterior', hojeIso()); relDiaPeriodo(de, ate); }
 
 async function carregarVendasDia() {
   if (!val('relDiaData')) setVal('relDiaData', hojeIso());
+  if (!val('relDiaAte')) setVal('relDiaAte', val('relDiaData'));
+  if (val('relDiaAte') < val('relDiaData')) setVal('relDiaAte', val('relDiaData'));
   try {
-    const d = await api('/api/relatorios/vendas-dia?dia=' + encodeURIComponent(val('relDiaData')));
+    const d = await api('/api/relatorios/vendas-dia?de=' + encodeURIComponent(val('relDiaData')) + '&ate=' + encodeURIComponent(val('relDiaAte')));
+    const umDia = d.de === d.ate;
+    const quando = umDia ? 'no dia' : 'no período';
+    const periodoTxt = umDia ? dataBr(d.de) : (dataBr(d.de) + ' a ' + dataBr(d.ate));
     const temObra = d.obras.total > 0;
     const cols = temObra ? 5 : 4;
     el('relDiaSaida').innerHTML = `
+      <div class="dica" style="margin-bottom:10px">📅 ${esc(periodoTxt)}</div>
       <div class="grid g4" style="margin-bottom:14px">
-        ${tile('Vendido no dia', R$(d.total_dia), 'caixa + obras', '')}
+        ${tile(umDia ? 'Vendido no dia' : 'Vendido no período', R$(d.total_dia), 'caixa + obras', '')}
         ${tile('Caixa', R$(d.caixa.total), d.caixa.cupons + ' cupom(ns)', 'verde')}
         ${temObra
           ? tile('Obras', R$(d.obras.total), d.obras.saidas + ' saída(s), a custo', 'laranja')
@@ -29,7 +50,7 @@ async function carregarVendasDia() {
         ${tile('Itens', Q(d.itens_qtd), d.linhas_qtd + ' produto(s) diferentes', 'cinza')}
       </div>
 
-      <div class="card"><h3>📦 Produtos que saíram no dia</h3>
+      <div class="card"><h3>📦 Produtos que saíram ${quando}</h3>
         <div class="tabela-wrap"><table>
           <thead><tr><th>Produto</th><th class="centro">Un.</th><th class="num">Qtd.</th>
             ${temObra ? '<th class="num">Qtd. obra</th>' : ''}<th class="num">Valor</th></tr></thead>
@@ -39,9 +60,9 @@ async function carregarVendasDia() {
             <td class="num">${Q(p.qtd)}</td>
             ${temObra ? `<td class="num">${p.qtd_obra > 0 ? Q(p.qtd_obra) : '—'}</td>` : ''}
             <td class="num"><strong>${N(p.valor)}</strong></td>
-          </tr>`).join('') || `<tr><td colspan="${cols}" class="centro" style="padding:22px">Nada vendido nesse dia.</td></tr>`}
+          </tr>`).join('') || `<tr><td colspan="${cols}" class="centro" style="padding:22px">Nada vendido nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}
           </tbody>
-          <tfoot><tr><td colspan="${cols - 1}" class="num">Total do dia</td><td class="num">${R$(d.total_dia)}</td></tr></tfoot>
+          <tfoot><tr><td colspan="${cols - 1}" class="num">Total ${umDia ? 'do dia' : 'do período'}</td><td class="num">${R$(d.total_dia)}</td></tr></tfoot>
         </table></div>
       </div>
 
@@ -50,14 +71,14 @@ async function carregarVendasDia() {
           <div class="tabela-wrap"><table>
             <thead><tr><th>Forma</th><th class="centro">Vendas</th><th class="num">Valor</th></tr></thead>
             <tbody>${d.pagamentos.map((p) => `<tr><td>${esc(p.forma)}</td><td class="centro">${p.qtd}</td><td class="num">${N(p.valor)}</td></tr>`).join('')
-              || '<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse dia.</td></tr>'}</tbody>
+              || `<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}</tbody>
           </table></div>
         </div>
         <div class="card"><h3>👤 Por vendedor (caixa)</h3>
           <div class="tabela-wrap"><table>
             <thead><tr><th>Vendedor</th><th class="centro">Cupons</th><th class="num">Valor</th></tr></thead>
             <tbody>${(d.vendedores || []).map((v) => `<tr><td><strong>${esc(v.vendedor)}</strong></td><td class="centro">${v.cupons}</td><td class="num"><strong>${N(v.total)}</strong></td></tr>`).join('')
-              || '<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse dia.</td></tr>'}</tbody>
+              || `<tr><td colspan="3" class="centro" style="padding:16px">Sem vendas no caixa nesse ${umDia ? 'dia' : 'período'}.</td></tr>`}</tbody>
           </table></div>
         </div>
         ${temObra ? `<div class="card"><h3>🏗️ Saídas para obras (a custo)</h3>
@@ -89,7 +110,7 @@ async function carregarVendasDia() {
                 : `<button class="btn pequeno verde" onclick="receberFiado(${f.id})">Receber</button>`}
               <button class="btn-ic" onclick="excluirFiado(${f.id})" title="Excluir">🗑️</button>
             </td></tr>`).join('')
-            || '<tr><td colspan="5" class="centro" style="padding:16px">Nenhum fiado nesse dia. Use "Lançar fiado" para registrar quem levou e paga depois.</td></tr>'}
+            || `<tr><td colspan="5" class="centro" style="padding:16px">Nenhum fiado nesse ${umDia ? 'dia' : 'período'}. Use "Lançar fiado" para registrar quem levou e paga depois.</td></tr>`}
           </tbody>
           ${d.fiado_aberto > 0 ? `<tfoot><tr><td colspan="2" class="num">A receber</td><td class="num"><strong>${N(d.fiado_aberto)}</strong></td><td colspan="2"></td></tr></tfoot>` : ''}
         </table></div>
