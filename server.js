@@ -48,7 +48,7 @@ const PORT = process.env.PORT || 3000;
 
 /* Versao do sistema — aparece na tela e no rodape do cupom.
    Serve para conferir na hora se o arquivo em uso e o mais novo. */
-const VERSAO = '1.34 - Vendas do Dia: botao incluir/excluir obras';
+const VERSAO = '1.35 - Vendas do Dia: por fornecedor + Qtd total';
 
 /* =========================================================================
    [1.14] ONDE O SISTEMA ESTA RODANDO
@@ -5106,6 +5106,26 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
   const caixaCusto = round2(itensVenda.reduce((s, i) => s + num(i.custo), 0));
   const obrasTotal = round2(itensObra.reduce((s, i) => s + num(i.total), 0));
 
+  // [1.35] quanto saiu por fornecedor (loja + obra, conforme "incluir obras").
+  // Valor = o mesmo da coluna (loja a preco de venda, obra a custo).
+  const mapForn = new Map();
+  const addForn = (rows) => rows.forEach((r) => {
+    const nome = (r.fornecedor && String(r.fornecedor).trim()) ? String(r.fornecedor).trim().toUpperCase() : 'SEM FORNECEDOR';
+    const e = mapForn.get(nome) || { nome, total: 0, qtd: 0 };
+    e.total = round2(e.total + num(r.total));
+    e.qtd = round2(e.qtd + num(r.qtd));
+    mapForn.set(nome, e);
+  });
+  addForn(all(`SELECT p.fornecedor AS fornecedor, SUM(i.total) AS total, SUM(i.quantidade) AS qtd
+    FROM venda_itens i JOIN vendas v ON v.id = i.venda_id LEFT JOIN produtos p ON p.id = i.produto_id
+    WHERE v.situacao='finalizada' AND v.data >= ? AND v.data <= ?
+    GROUP BY p.fornecedor`, [de, ateFim]));
+  if (incluirObras) addForn(all(`SELECT p.fornecedor AS fornecedor, SUM(i.total) AS total, SUM(i.quantidade) AS qtd
+    FROM obra_saida_itens i JOIN obra_saidas s ON s.id = i.saida_id LEFT JOIN produtos p ON p.id = i.produto_id
+    WHERE s.data >= ? AND s.data <= ?
+    GROUP BY p.fornecedor`, [de, ate]));
+  const porFornecedor = [...mapForn.values()].sort((a, b) => b.total - a.total);
+
   res.json({
     de, ate, dia: de, incluir_obras: incluirObras,
     caixa: {
@@ -5122,6 +5142,7 @@ app.get('/api/relatorios/vendas-dia', auth, (req, res) => {
       valor: round2(num(f.valor)), saldo: round2(num(f.valor) - num(f.valor_recebido)), situacao: f.situacao })),
     fiado_aberto: fiadoAberto,
     obras_detalhe: obrasPorNome.map((o) => ({ nome: o.nome, total: round2(o.total), saidas: o.saidas })),
+    por_fornecedor: porFornecedor,
     produtos
   });
 });
